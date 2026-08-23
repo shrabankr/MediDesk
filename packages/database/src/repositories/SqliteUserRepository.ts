@@ -122,28 +122,57 @@ export class SqliteUserRepository implements IUserRepository {
     });
   }
 
-  public async update(id: string, partial: Partial<Omit<User, 'id' | 'createdAt'>>): Promise<User> {
+  public async countActiveOwners(organizationId: string): Promise<number> {
     const raw = this.db.getRawDb();
-    const updates: string[] = [];
-    const params: unknown[] = [];
+    const row = raw.prepare(`
+      SELECT COUNT(DISTINCT u.id) as count
+      FROM users u
+      INNER JOIN user_roles ur ON ur.user_id = u.id
+      INNER JOIN roles r ON r.id = ur.role_id
+      WHERE u.organization_id = ?
+        AND u.is_active = 1
+        AND u.is_locked = 0
+        AND r.name = 'OWNER'
+    `).get(organizationId) as { count: number } | undefined;
+    return row ? row.count : 0;
+  }
 
-    if (partial.username !== undefined) { updates.push('username = ?'); params.push(partial.username); }
-    if (partial.email !== undefined) { updates.push('email = ?'); params.push(partial.email); }
-    if (partial.fullName !== undefined) { updates.push('full_name = ?'); params.push(partial.fullName); }
-    if (partial.isActive !== undefined) { updates.push('is_active = ?'); params.push(partial.isActive ? 1 : 0); }
-    if (partial.isLocked !== undefined) { updates.push('is_locked = ?'); params.push(partial.isLocked ? 1 : 0); }
-    if (partial.failedLoginAttempts !== undefined) { updates.push('failed_login_attempts = ?'); params.push(partial.failedLoginAttempts); }
+  public async update(id: string, partial: Partial<Omit<User, 'id' | 'createdAt'>>): Promise<User> {
+    return this.db.transaction(() => {
+      const raw = this.db.getRawDb();
+      const updates: string[] = [];
+      const params: unknown[] = [];
 
-    updates.push('updated_at = ?');
-    params.push(new Date().toISOString());
+      if (partial.username !== undefined) { updates.push('username = ?'); params.push(partial.username); }
+      if (partial.email !== undefined) { updates.push('email = ?'); params.push(partial.email); }
+      if (partial.fullName !== undefined) { updates.push('full_name = ?'); params.push(partial.fullName); }
+      if (partial.isActive !== undefined) { updates.push('is_active = ?'); params.push(partial.isActive ? 1 : 0); }
+      if (partial.isLocked !== undefined) { updates.push('is_locked = ?'); params.push(partial.isLocked ? 1 : 0); }
+      if (partial.failedLoginAttempts !== undefined) { updates.push('failed_login_attempts = ?'); params.push(partial.failedLoginAttempts); }
 
-    params.push(id);
+      updates.push('updated_at = ?');
+      params.push(new Date().toISOString());
 
-    raw.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+      params.push(id);
 
-    const user = await this.findById(id);
-    if (!user) throw new Error(`User ${id} not found after update`);
-    return user;
+      raw.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+
+      // Synchronize roles if provided
+      if (partial.roles !== undefined) {
+        raw.prepare('DELETE FROM user_roles WHERE user_id = ?').run(id);
+        for (const roleName of partial.roles) {
+          const role = raw.prepare('SELECT id FROM roles WHERE name = ?').get(roleName) as { id: string } | undefined;
+          if (role) {
+            raw.prepare('INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)').run(id, role.id);
+          }
+        }
+      }
+
+      const row = raw.prepare('SELECT * FROM users WHERE id = ?').get(id) as UserRow | undefined;
+      if (!row) throw new Error(`User ${id} not found after update`);
+      const roles = this.getUserRoles(row.id);
+      return this.mapRow(row, roles);
+    });
   }
 
   public async updatePassword(id: string, passwordHash: string): Promise<void> {

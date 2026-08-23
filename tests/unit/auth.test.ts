@@ -78,6 +78,7 @@ describe('AuthenticationService Unit Tests', () => {
         mockUser.failedLoginAttempts = 0;
         mockUser.isLocked = false;
       }),
+      countActiveOwners: vi.fn(async () => 1),
       count: vi.fn(async () => 1)
     };
 

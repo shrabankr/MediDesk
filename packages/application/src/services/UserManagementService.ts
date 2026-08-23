@@ -11,7 +11,8 @@ import {
   AuthorizationError,
   ValidationError,
   EntityNotFoundError,
-  PermissionCode
+  PermissionCode,
+  LastActiveOwnerProtectionError
 } from '@medidesk/domain';
 import { RBACEngine } from '@medidesk/authorization';
 import { AuditService } from '@medidesk/audit';
@@ -176,6 +177,20 @@ export class UserManagementService {
       }
     }
 
+    // Invariant Check: Last Active Owner Protection (prevent removing OWNER role if last active Owner)
+    if (roles !== undefined) {
+      const isTargetOwner = user.roles.includes(RoleName.OWNER);
+      const isRemovingOwnerRole = isTargetOwner && !roles.includes(RoleName.OWNER);
+      if (isRemovingOwnerRole && user.isActive && !user.isLocked) {
+        const activeOwners = await this.userRepo.countActiveOwners(user.organizationId);
+        if (activeOwners <= 1) {
+          throw new LastActiveOwnerProtectionError(
+            'Operation denied: Cannot remove the Owner role from the last active Owner in the organization. At least one active Owner must always remain.'
+          );
+        }
+      }
+    }
+
     const updated = await this.userRepo.update(userId, {
       fullName,
       email,
@@ -237,11 +252,17 @@ export class UserManagementService {
       throw new EntityNotFoundError('User', userId);
     }
 
-    // Safety check: Cannot deactivate oneself if current user is an Owner
-    if (userId === actor.id && !isActive) {
-      throw new ValidationError('Cannot deactivate your own active session account', {
-        userId: ['Self-deactivation is prohibited']
-      });
+    // Invariant Check: Last Active Owner Protection (prevent deactivating last active Owner)
+    if (!isActive) {
+      const isTargetOwner = user.roles.includes(RoleName.OWNER);
+      if (isTargetOwner && user.isActive && !user.isLocked) {
+        const activeOwners = await this.userRepo.countActiveOwners(user.organizationId);
+        if (activeOwners <= 1) {
+          throw new LastActiveOwnerProtectionError(
+            'Operation denied: Cannot deactivate the last active Owner in the organization. At least one active Owner must always remain.'
+          );
+        }
+      }
     }
 
     const updated = await this.userRepo.update(userId, {

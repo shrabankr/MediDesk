@@ -58,3 +58,10 @@ export class AccountDisabledError extends DomainError {
   }
 }
 
+export class LastActiveOwnerProtectionError extends DomainError {
+  constructor(message = 'Operation denied: Organization must always retain at least one active Owner account.') {
+    super(message);
+    this.name = 'LastActiveOwnerProtectionError';
+  }
+}
+

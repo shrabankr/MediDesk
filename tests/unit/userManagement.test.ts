@@ -9,11 +9,12 @@ import {
   IRoleRepository,
   RoleName,
   AuthorizationError,
-  ValidationError,
   SessionUser,
   Organization,
   Role,
-  AuditEvent
+  AuditEvent,
+  LastActiveOwnerProtectionError,
+  User
 } from '@medidesk/domain';
 import { RBACEngine } from '@medidesk/authorization';
 import { AuditService } from '@medidesk/audit';
@@ -47,7 +48,7 @@ describe('UserManagementService Unit Tests', () => {
     isLocked: false,
     failedLoginAttempts: 0,
     roles: [RoleName.OWNER],
-    permissions: ['org.manage', 'auth.user.manage', 'patient.read', 'patient.write'],
+    permissions: ['org.manage', 'user.create', 'user.read', 'user.update', 'user.disable'],
     createdAt: new Date(),
     updatedAt: new Date()
   };
@@ -67,28 +68,69 @@ describe('UserManagementService Unit Tests', () => {
     updatedAt: new Date()
   };
 
+  let activeOwnerUser: User;
+  let secondOwnerUser: User;
+  let doctorUser: User;
+
   beforeEach(() => {
     passwordHasher = new ScryptPasswordHasher();
     rbacEngine = new RBACEngine();
 
+    activeOwnerUser = {
+      id: 'owner-1',
+      organizationId: 'org-1',
+      username: 'clinic_owner',
+      email: 'owner@metro.local',
+      fullName: 'Owner Name',
+      passwordHash: 'hash',
+      isActive: true,
+      isLocked: false,
+      failedLoginAttempts: 0,
+      roles: [RoleName.OWNER],
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    secondOwnerUser = {
+      id: 'owner-2',
+      organizationId: 'org-1',
+      username: 'second_owner',
+      email: 'second@metro.local',
+      fullName: 'Second Owner',
+      passwordHash: 'hash',
+      isActive: true,
+      isLocked: false,
+      failedLoginAttempts: 0,
+      roles: [RoleName.OWNER],
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    doctorUser = {
+      id: 'doctor-1',
+      organizationId: 'org-1',
+      username: 'doctor_smith',
+      email: 'doc@metro.local',
+      fullName: 'Dr. Smith',
+      passwordHash: 'hash',
+      isActive: true,
+      isLocked: false,
+      failedLoginAttempts: 0,
+      roles: [RoleName.DOCTOR],
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
     userRepoMock = {
-      findById: vi.fn(async (id) => ({
-        id,
-        organizationId: 'org-1',
-        username: 'existing_user',
-        email: 'user@metro.local',
-        fullName: 'Existing User',
-        passwordHash: 'hash',
-        isActive: true,
-        isLocked: false,
-        failedLoginAttempts: 0,
-        roles: [RoleName.DOCTOR],
-        createdAt: new Date(),
-        updatedAt: new Date()
-      })),
+      findById: vi.fn(async (id) => {
+        if (id === 'owner-1') return activeOwnerUser;
+        if (id === 'owner-2') return secondOwnerUser;
+        if (id === 'doctor-1') return doctorUser;
+        return null;
+      }),
       findByUsername: vi.fn(async () => null),
       findByEmail: vi.fn(async () => null),
-      listByOrganization: vi.fn(async () => []),
+      listByOrganization: vi.fn(async () => [activeOwnerUser, doctorUser]),
       create: vi.fn(async (dto) => ({
         id: 'new-user-123',
         organizationId: dto.organizationId,
@@ -103,25 +145,20 @@ describe('UserManagementService Unit Tests', () => {
         createdAt: new Date(),
         updatedAt: new Date()
       })),
-      update: vi.fn(async (id, partial) => ({
-        id,
-        organizationId: 'org-1',
-        username: 'existing_user',
-        email: partial.email || 'user@metro.local',
-        fullName: partial.fullName || 'Existing User',
-        passwordHash: 'hash',
-        isActive: partial.isActive !== undefined ? partial.isActive : true,
-        isLocked: false,
-        failedLoginAttempts: 0,
-        roles: partial.roles || [RoleName.DOCTOR],
-        createdAt: new Date(),
-        updatedAt: new Date()
-      })),
+      update: vi.fn(async (id, partial) => {
+        const target = id === 'owner-1' ? activeOwnerUser : id === 'owner-2' ? secondOwnerUser : doctorUser;
+        if (partial.isActive !== undefined) target.isActive = partial.isActive;
+        if (partial.roles !== undefined) target.roles = partial.roles;
+        if (partial.fullName !== undefined) target.fullName = partial.fullName;
+        if (partial.email !== undefined) target.email = partial.email;
+        return target;
+      }),
       updatePassword: vi.fn(),
       updateLastLogin: vi.fn(),
       recordFailedLogin: vi.fn(),
       resetFailedLogins: vi.fn(),
-      count: vi.fn(async () => 1)
+      countActiveOwners: vi.fn(async () => 1),
+      count: vi.fn(async () => 2)
     };
 
     orgRepoMock = {
@@ -194,41 +231,89 @@ describe('UserManagementService Unit Tests', () => {
   it('should allow Owner to reset user password', async () => {
     await userService.resetPassword(
       {
-        userId: 'target-user-1',
+        userId: 'doctor-1',
         newPassword: 'NewPassword999!'
       },
       ownerActor
     );
 
     expect(userRepoMock.updatePassword).toHaveBeenCalled();
-    expect(userRepoMock.resetFailedLogins).toHaveBeenCalledWith('target-user-1');
+    expect(userRepoMock.resetFailedLogins).toHaveBeenCalledWith('doctor-1');
   });
 
-  it('should allow Owner to toggle user active status', async () => {
+  it('should allow Owner to toggle regular doctor active status', async () => {
     const updated = await userService.toggleUserStatus(
       {
-        userId: 'target-user-1',
+        userId: 'doctor-1',
         isActive: false
       },
       ownerActor
     );
 
     expect(updated.isActive).toBe(false);
-    expect(userRepoMock.update).toHaveBeenCalledWith('target-user-1', {
+    expect(userRepoMock.update).toHaveBeenCalledWith('doctor-1', {
       isActive: false,
       isLocked: false
     });
   });
 
-  it('should prevent Owner from deactivating their own active account', async () => {
-    await expect(
-      userService.toggleUserStatus(
+  describe('Last Active Owner Protection Invariant', () => {
+    it('should DENY deactivating the only active Owner', async () => {
+      userRepoMock.countActiveOwners = vi.fn(async () => 1);
+
+      await expect(
+        userService.toggleUserStatus(
+          {
+            userId: 'owner-1',
+            isActive: false
+          },
+          ownerActor
+        )
+      ).rejects.toThrow(LastActiveOwnerProtectionError);
+    });
+
+    it('should DENY removing OWNER role from the only active Owner', async () => {
+      userRepoMock.countActiveOwners = vi.fn(async () => 1);
+
+      await expect(
+        userService.updateUser(
+          {
+            userId: 'owner-1',
+            roles: [RoleName.STAFF]
+          },
+          ownerActor
+        )
+      ).rejects.toThrow(LastActiveOwnerProtectionError);
+    });
+
+    it('should ALLOW deactivating an Owner when another active Owner remains', async () => {
+      userRepoMock.countActiveOwners = vi.fn(async () => 2);
+
+      const updated = await userService.toggleUserStatus(
         {
-          userId: ownerActor.id,
+          userId: 'owner-2',
           isActive: false
         },
         ownerActor
-      )
-    ).rejects.toThrow(ValidationError);
+      );
+
+      expect(updated.isActive).toBe(false);
+      expect(userRepoMock.update).toHaveBeenCalled();
+    });
+
+    it('should ALLOW removing OWNER role from an Owner when another active Owner remains', async () => {
+      userRepoMock.countActiveOwners = vi.fn(async () => 2);
+
+      const updated = await userService.updateUser(
+        {
+          userId: 'owner-2',
+          roles: [RoleName.DOCTOR]
+        },
+        ownerActor
+      );
+
+      expect(updated.roles).toEqual([RoleName.DOCTOR]);
+      expect(userRepoMock.update).toHaveBeenCalled();
+    });
   });
 });

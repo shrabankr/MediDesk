@@ -11,5 +11,6 @@ export interface IUserRepository {
   updateLastLogin(id: string, date: Date): Promise<void>;
   recordFailedLogin(id: string): Promise<number>;
   resetFailedLogins(id: string): Promise<void>;
+  countActiveOwners(organizationId: string): Promise<number>;
   count(): Promise<number>;
 }
