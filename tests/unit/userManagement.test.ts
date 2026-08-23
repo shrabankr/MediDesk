@@ -7,6 +7,8 @@ import {
   IUserRepository,
   IOrganizationRepository,
   IRoleRepository,
+  IApplicationStateRepository,
+  ApplicationStateKeys,
   RoleName,
   AuthorizationError,
   SessionUser,
@@ -24,6 +26,7 @@ describe('UserManagementService Unit Tests', () => {
   let userRepoMock: IUserRepository;
   let orgRepoMock: IOrganizationRepository;
   let roleRepoMock: IRoleRepository;
+  let stateRepoMock: IApplicationStateRepository;
   let passwordHasher: ScryptPasswordHasher;
   let auditServiceMock: AuditService;
   let rbacEngine: RBACEngine;
@@ -179,14 +182,29 @@ describe('UserManagementService Unit Tests', () => {
       getPermissionsForUser: vi.fn(async () => [])
     };
 
+    stateRepoMock = {
+      get: vi.fn(async (key: string) => {
+        if (key === ApplicationStateKeys.EMERGENCY_RECOVERY_KEY_HASH) {
+          return await passwordHasher.hash('emergency-recovery-key-2026');
+        }
+        return null;
+      }),
+      set: vi.fn(),
+      isInitialized: vi.fn(async () => true),
+      setInitialized: vi.fn()
+    };
+
     auditServiceMock = {
       logEvent: vi.fn(async () => ({ id: 'evt-1' } as unknown as AuditEvent))
     } as unknown as AuditService;
+
+    rbacEngine = new RBACEngine();
 
     userService = new UserManagementService(
       userRepoMock,
       orgRepoMock,
       roleRepoMock,
+      stateRepoMock,
       passwordHasher,
       auditServiceMock,
       rbacEngine
@@ -314,6 +332,21 @@ describe('UserManagementService Unit Tests', () => {
 
       expect(updated.roles).toEqual([RoleName.DOCTOR]);
       expect(userRepoMock.update).toHaveBeenCalled();
+    });
+
+    it('should create a secondary Owner through authorized emergency recovery workflow', async () => {
+      const newOwner = await userService.createSecondaryOwnerViaRecovery({
+        organizationId: 'org-1',
+        username: 'emergency_owner',
+        email: 'emergency@metro.local',
+        fullName: 'Dr. Emergency Owner',
+        password: 'Password123!',
+        recoveryToken: 'emergency-recovery-key-2026'
+      });
+
+      expect(newOwner.username).toBe('emergency_owner');
+      expect(newOwner.roles).toContain(RoleName.OWNER);
+      expect(userRepoMock.create).toHaveBeenCalled();
     });
   });
 });

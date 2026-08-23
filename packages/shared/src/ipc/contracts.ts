@@ -15,10 +15,12 @@ export const IPC_CHANNELS = {
   AUTH_LOGIN: 'auth:login',
   AUTH_LOGOUT: 'auth:logout',
   AUTH_GET_CURRENT_USER: 'auth:get-current-user',
+  AUTH_RECOVER_OWNER: 'auth:recover-owner',
 
   // User Management
   USER_LIST: 'user:list',
   USER_CREATE: 'user:create',
+  USER_CREATE_OWNER_RECOVERY: 'user:create-owner-recovery',
   USER_UPDATE: 'user:update',
   USER_RESET_PASSWORD: 'user:reset-password',
   USER_TOGGLE_STATUS: 'user:toggle-status',
@@ -109,6 +111,21 @@ export interface ResetPasswordRequest {
 export interface ToggleUserStatusRequest {
   userId: string;
   isActive: boolean;
+}
+
+export interface RecoverOwnerRequest {
+  username: string;
+  recoveryToken: string;
+  newPassword?: string;
+}
+
+export interface CreateOwnerViaRecoveryRequest {
+  organizationId: string;
+  username: string;
+  email: string;
+  fullName: string;
+  password: string;
+  recoveryToken: string;
 }
 
 export interface UserPermissionsData {

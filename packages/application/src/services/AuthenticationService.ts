@@ -2,24 +2,36 @@ import crypto from 'crypto';
 import {
   IUserRepository,
   IOrganizationRepository,
+  IApplicationStateRepository,
   IPasswordHasher,
+  ApplicationStateKeys,
+  RoleName,
   SessionUser,
   AuthSession,
   AuditAction,
   AuditResult,
   AuthenticationError,
+  AuthorizationError,
   AccountLockedError,
   AccountDisabledError,
-  ValidationError
+  ValidationError,
+  DomainError
 } from '@medidesk/domain';
 import { RBACEngine } from '@medidesk/authorization';
 import { AuditService } from '@medidesk/audit';
 import { Logger } from '@medidesk/shared';
-import { LoginRequestInput, validateSchema, LoginRequestSchema } from '@medidesk/validation';
+import {
+  LoginRequestInput,
+  RecoverOwnerInput,
+  validateSchema,
+  LoginRequestSchema,
+  RecoverOwnerSchema
+} from '@medidesk/validation';
 
 export class AuthenticationService {
   private userRepo: IUserRepository;
   private orgRepo: IOrganizationRepository;
+  private stateRepo: IApplicationStateRepository;
   private passwordHasher: IPasswordHasher;
   private auditService: AuditService;
   private rbacEngine: RBACEngine;
@@ -29,12 +41,14 @@ export class AuthenticationService {
   constructor(
     userRepo: IUserRepository,
     orgRepo: IOrganizationRepository,
+    stateRepo: IApplicationStateRepository,
     passwordHasher: IPasswordHasher,
     auditService: AuditService,
     rbacEngine: RBACEngine
   ) {
     this.userRepo = userRepo;
     this.orgRepo = orgRepo;
+    this.stateRepo = stateRepo;
     this.passwordHasher = passwordHasher;
     this.auditService = auditService;
     this.rbacEngine = rbacEngine;
@@ -154,6 +168,88 @@ export class AuthenticationService {
     this.logger.info(`User logged in successfully: ${user.username} (Roles: ${user.roles.join(', ')})`);
 
     return { user: sessionUser, sessionToken };
+  }
+
+  /**
+   * Safe, auditable emergency recovery mechanism for locked Owner accounts.
+   * Resolves circular single-owner lockout without creating a backdoor or SUPER_ADMIN.
+   */
+  public async recoverOwnerAccount(input: RecoverOwnerInput): Promise<{ success: boolean; message: string }> {
+    const validated = validateSchema(RecoverOwnerSchema, input);
+    if (!validated.success) {
+      throw new ValidationError('Validation failed for owner recovery', validated.errors);
+    }
+
+    const { username, recoveryToken, newPassword } = validated.data;
+    const user = await this.userRepo.findByUsername(username);
+
+    if (!user) {
+      await this.auditService.logEvent({
+        actor: { username, role: 'UNKNOWN', roles: [] },
+        action: AuditAction.USER_LOGIN_FAILED,
+        resource: 'auth/recovery',
+        result: AuditResult.FAILURE,
+        metadata: { reason: 'recovery_user_not_found', attemptedUsername: username }
+      });
+      throw new AuthenticationError('Invalid username or emergency recovery token.');
+    }
+
+    // Security check: Recovery is strictly limited to Owner accounts
+    if (!user.roles.includes(RoleName.OWNER)) {
+      await this.auditService.logEvent({
+        actor: { id: user.id, username: user.username, role: user.roles[0], roles: user.roles },
+        action: AuditAction.USER_LOGIN_FAILED,
+        resource: 'auth/recovery',
+        result: AuditResult.FAILURE,
+        metadata: { reason: 'user_not_an_owner', attemptedUsername: username }
+      });
+      throw new AuthorizationError('Emergency recovery is strictly restricted to Owner accounts.');
+    }
+
+    // Verify recovery token against cryptographically hashed key in application_state
+    const storedHash = await this.stateRepo.get(ApplicationStateKeys.EMERGENCY_RECOVERY_KEY_HASH);
+    if (!storedHash) {
+      throw new DomainError('Emergency recovery key is not configured.');
+    }
+
+    const isValidToken = await this.passwordHasher.verify(recoveryToken, storedHash);
+    if (!isValidToken) {
+      await this.auditService.logEvent({
+        actor: { id: user.id, username: user.username, role: user.roles[0], roles: user.roles },
+        action: AuditAction.USER_LOGIN_FAILED,
+        resource: 'auth/recovery',
+        result: AuditResult.FAILURE,
+        metadata: { reason: 'invalid_emergency_token', targetUserId: user.id }
+      });
+      throw new AuthenticationError('Invalid emergency recovery token.');
+    }
+
+    // Reset failed logins (unlocks account)
+    await this.userRepo.resetFailedLogins(user.id);
+
+    // Update password if new password was provided
+    if (newPassword) {
+      const newHash = await this.passwordHasher.hash(newPassword);
+      await this.userRepo.updatePassword(user.id, newHash);
+    }
+
+    await this.auditService.logEvent({
+      actor: { id: user.id, username: user.username, role: user.roles[0], roles: user.roles },
+      action: AuditAction.USER_UPDATED,
+      resource: 'auth/recovery',
+      result: AuditResult.SUCCESS,
+      metadata: {
+        action: 'emergency_owner_recovery_unlock',
+        targetUserId: user.id,
+        passwordReset: Boolean(newPassword)
+      }
+    });
+
+    this.logger.info(`Owner account '${user.username}' successfully unlocked via emergency recovery.`);
+    return {
+      success: true,
+      message: `Owner account '${user.username}' has been unlocked and verified successfully.`
+    };
   }
 
   public async logout(sessionToken: string): Promise<void> {

@@ -49,6 +49,7 @@ export class SqliteAuditRepository implements IAuditRepository {
         ipAddress: row.actor_ip ?? undefined
       },
       target: row.target ?? undefined,
+      resource: row.target ?? undefined,
       result: row.result as AuditResult,
       reason: row.reason ?? undefined,
       metadata: parsedMeta,
@@ -60,6 +61,7 @@ export class SqliteAuditRepository implements IAuditRepository {
     const raw = this.db.getRawDb();
     const id = dto.id || crypto.randomUUID();
     const timestamp = (dto.timestamp || new Date()).toISOString();
+    const targetOrResource = dto.target ?? dto.resource ?? null;
 
     raw.prepare(`
       INSERT INTO audit_events (
@@ -70,11 +72,11 @@ export class SqliteAuditRepository implements IAuditRepository {
     `).run(
       id,
       dto.action,
-      dto.actor.id,
-      dto.actor.username,
+      dto.actor.id || 'anonymous',
+      dto.actor.username || 'Anonymous',
       dto.actor.role ?? null,
       dto.actor.ipAddress ?? null,
-      dto.target ?? null,
+      targetOrResource,
       dto.result,
       dto.reason ?? null,
       dto.metadata ? JSON.stringify(dto.metadata) : null,
@@ -85,7 +87,8 @@ export class SqliteAuditRepository implements IAuditRepository {
       id,
       action: dto.action,
       actor: dto.actor,
-      target: dto.target,
+      target: targetOrResource ?? undefined,
+      resource: targetOrResource ?? undefined,
       result: dto.result,
       reason: dto.reason,
       metadata: dto.metadata,

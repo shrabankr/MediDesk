@@ -131,7 +131,6 @@ export class SqliteUserRepository implements IUserRepository {
       INNER JOIN roles r ON r.id = ur.role_id
       WHERE u.organization_id = ?
         AND u.is_active = 1
-        AND u.is_locked = 0
         AND r.name = 'OWNER'
     `).get(organizationId) as { count: number } | undefined;
     return row ? row.count : 0;

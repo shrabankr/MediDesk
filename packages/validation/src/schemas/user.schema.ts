@@ -55,3 +55,26 @@ export const LoginRequestSchema = z.object({
 });
 
 export type LoginRequestInput = z.infer<typeof LoginRequestSchema>;
+
+export const RecoverOwnerSchema = z.object({
+  username: z.string().min(1, 'Username is required'),
+  recoveryToken: z.string().min(8, 'Recovery token must be at least 8 characters'),
+  newPassword: PasswordSchema.optional()
+});
+
+export type RecoverOwnerInput = z.infer<typeof RecoverOwnerSchema>;
+
+export const CreateOwnerViaRecoverySchema = z.object({
+  organizationId: z.string().min(1, 'Organization ID is required'),
+  username: z
+    .string()
+    .min(3, 'Username must be at least 3 characters')
+    .max(50)
+    .regex(/^[a-zA-Z0-9_.-]+$/, 'Username can only contain alphanumeric characters, dots, hyphens, and underscores'),
+  email: z.string().email('Invalid email address'),
+  fullName: z.string().min(2, 'Full name must be at least 2 characters').max(100),
+  password: PasswordSchema,
+  recoveryToken: z.string().min(8, 'Recovery token is required')
+});
+
+export type CreateOwnerViaRecoveryInput = z.infer<typeof CreateOwnerViaRecoverySchema>;

@@ -2,17 +2,21 @@ import {
   IUserRepository,
   IOrganizationRepository,
   IRoleRepository,
+  IApplicationStateRepository,
   IPasswordHasher,
+  ApplicationStateKeys,
   SafeUser,
   SessionUser,
   RoleName,
   AuditAction,
   AuditResult,
   AuthorizationError,
+  AuthenticationError,
   ValidationError,
   EntityNotFoundError,
   PermissionCode,
-  LastActiveOwnerProtectionError
+  LastActiveOwnerProtectionError,
+  DomainError
 } from '@medidesk/domain';
 import { RBACEngine } from '@medidesk/authorization';
 import { AuditService } from '@medidesk/audit';
@@ -22,10 +26,12 @@ import {
   UpdateUserInput,
   ResetPasswordInput,
   ToggleUserStatusInput,
+  CreateOwnerViaRecoveryInput,
   CreateUserSchema,
   UpdateUserSchema,
   ResetPasswordSchema,
   ToggleUserStatusSchema,
+  CreateOwnerViaRecoverySchema,
   validateSchema
 } from '@medidesk/validation';
 
@@ -33,6 +39,7 @@ export class UserManagementService {
   private userRepo: IUserRepository;
   private orgRepo: IOrganizationRepository;
   private roleRepo: IRoleRepository;
+  private stateRepo: IApplicationStateRepository;
   private passwordHasher: IPasswordHasher;
   private auditService: AuditService;
   private rbacEngine: RBACEngine;
@@ -42,6 +49,7 @@ export class UserManagementService {
     userRepo: IUserRepository,
     orgRepo: IOrganizationRepository,
     roleRepo: IRoleRepository,
+    stateRepo: IApplicationStateRepository,
     passwordHasher: IPasswordHasher,
     auditService: AuditService,
     rbacEngine: RBACEngine
@@ -49,6 +57,7 @@ export class UserManagementService {
     this.userRepo = userRepo;
     this.orgRepo = orgRepo;
     this.roleRepo = roleRepo;
+    this.stateRepo = stateRepo;
     this.passwordHasher = passwordHasher;
     this.auditService = auditService;
     this.rbacEngine = rbacEngine;
@@ -155,6 +164,78 @@ export class UserManagementService {
     return this.toSafeUser(created);
   }
 
+  /**
+   * Provisions a second Owner account during emergency recovery when primary Owner is unavailable or locked.
+   * Authorized strictly via the verified emergency recovery token.
+   */
+  public async createSecondaryOwnerViaRecovery(input: CreateOwnerViaRecoveryInput): Promise<SafeUser> {
+    const validated = validateSchema(CreateOwnerViaRecoverySchema, input);
+    if (!validated.success) {
+      throw new ValidationError('Validation failed for emergency owner creation', validated.errors);
+    }
+
+    const { organizationId, username, email, fullName, password, recoveryToken } = validated.data;
+
+    // Verify recovery token
+    const storedHash = await this.stateRepo.get(ApplicationStateKeys.EMERGENCY_RECOVERY_KEY_HASH);
+    if (!storedHash) {
+      throw new DomainError('Emergency recovery key is not configured.');
+    }
+
+    const isValidToken = await this.passwordHasher.verify(recoveryToken, storedHash);
+    if (!isValidToken) {
+      await this.auditService.logEvent({
+        actor: { username, role: 'EMERGENCY_RECOVERY', roles: [] },
+        action: AuditAction.USER_LOGIN_FAILED,
+        resource: 'auth/recovery',
+        result: AuditResult.FAILURE,
+        metadata: { reason: 'invalid_emergency_recovery_token', attemptedUsername: username }
+      });
+      throw new AuthenticationError('Invalid emergency recovery token.');
+    }
+
+    const org = await this.orgRepo.findById(organizationId);
+    if (!org) {
+      throw new EntityNotFoundError('Organization', organizationId);
+    }
+
+    const existingUsername = await this.userRepo.findByUsername(username);
+    if (existingUsername) {
+      throw new ValidationError('Username is already taken', { username: ['Username is already in use'] });
+    }
+
+    const existingEmail = await this.userRepo.findByEmail(email);
+    if (existingEmail) {
+      throw new ValidationError('Email is already registered', { email: ['Email address is already in use'] });
+    }
+
+    const passwordHash = await this.passwordHasher.hash(password);
+
+    const created = await this.userRepo.create({
+      organizationId,
+      username,
+      email,
+      fullName,
+      passwordHash,
+      roles: [RoleName.OWNER]
+    });
+
+    await this.auditService.logEvent({
+      actor: { id: created.id, username: created.username, role: RoleName.OWNER, roles: [RoleName.OWNER] },
+      action: AuditAction.USER_CREATED,
+      resource: `user/${created.id}`,
+      result: AuditResult.SUCCESS,
+      metadata: {
+        action: 'emergency_recovery_secondary_owner_creation',
+        createdUserId: created.id,
+        createdUsername: created.username
+      }
+    });
+
+    this.logger.info(`Secondary Owner '${created.username}' created via emergency recovery.`);
+    return this.toSafeUser(created);
+  }
+
   public async updateUser(input: UpdateUserInput, actor: SessionUser): Promise<SafeUser> {
     this.assertPermission(actor, PermissionCode.USER_UPDATE);
 
@@ -178,10 +259,11 @@ export class UserManagementService {
     }
 
     // Invariant Check: Last Active Owner Protection (prevent removing OWNER role if last active Owner)
+    // Note: Locked state does NOT remove active status; active owners are protected regardless of lock status
     if (roles !== undefined) {
       const isTargetOwner = user.roles.includes(RoleName.OWNER);
       const isRemovingOwnerRole = isTargetOwner && !roles.includes(RoleName.OWNER);
-      if (isRemovingOwnerRole && user.isActive && !user.isLocked) {
+      if (isRemovingOwnerRole && user.isActive) {
         const activeOwners = await this.userRepo.countActiveOwners(user.organizationId);
         if (activeOwners <= 1) {
           throw new LastActiveOwnerProtectionError(
@@ -253,9 +335,10 @@ export class UserManagementService {
     }
 
     // Invariant Check: Last Active Owner Protection (prevent deactivating last active Owner)
+    // Note: Locked state does NOT remove active status; active owners are protected regardless of lock status
     if (!isActive) {
       const isTargetOwner = user.roles.includes(RoleName.OWNER);
-      if (isTargetOwner && user.isActive && !user.isLocked) {
+      if (isTargetOwner && user.isActive) {
         const activeOwners = await this.userRepo.countActiveOwners(user.organizationId);
         if (activeOwners <= 1) {
           throw new LastActiveOwnerProtectionError(

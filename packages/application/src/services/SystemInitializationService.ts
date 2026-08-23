@@ -2,6 +2,7 @@ import {
   IOrganizationRepository,
   IUserRepository,
   IApplicationStateRepository,
+  ApplicationStateKeys,
   RoleName,
   DomainError
 } from '@medidesk/domain';
@@ -97,6 +98,10 @@ export class SystemInitializationService {
 
     const now = new Date();
     await this.stateRepo.setInitialized(owner.id);
+
+    // Securely hash and store emergency recovery key for Owner account recovery
+    const recoveryKeyHash = await this.passwordHasher.hash(validated.developerToken);
+    await this.stateRepo.set(ApplicationStateKeys.EMERGENCY_RECOVERY_KEY_HASH, recoveryKeyHash);
 
     await this.auditService.logSystemInitialized(owner.id, owner.username, {
       organizationId: organization.id,

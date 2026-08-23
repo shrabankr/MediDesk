@@ -52,6 +52,10 @@ const mediDeskBridge = {
     return ipcRenderer.invoke(IPC_CHANNELS.AUTH_GET_CURRENT_USER, sessionToken);
   },
 
+  recoverOwnerAccount: async (payload: { username: string; recoveryToken: string; newPassword?: string }): Promise<IPCResponse<{ success: boolean; message: string }>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.AUTH_RECOVER_OWNER, payload);
+  },
+
   // User Management
   listUsers: async (organizationId: string, sessionToken: string): Promise<IPCResponse<SafeUser[]>> => {
     return ipcRenderer.invoke(IPC_CHANNELS.USER_LIST, { organizationId, sessionToken });

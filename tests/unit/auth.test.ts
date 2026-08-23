@@ -6,6 +6,8 @@ import {
 import {
   IUserRepository,
   IOrganizationRepository,
+  IApplicationStateRepository,
+  ApplicationStateKeys,
   RoleName,
   AuthenticationError,
   AccountLockedError,
@@ -21,6 +23,7 @@ describe('AuthenticationService Unit Tests', () => {
   let authService: AuthenticationService;
   let userRepoMock: IUserRepository;
   let orgRepoMock: IOrganizationRepository;
+  let stateRepoMock: IApplicationStateRepository;
   let passwordHasher: ScryptPasswordHasher;
   let auditServiceMock: AuditService;
   let rbacEngine: RBACEngine;
@@ -90,6 +93,18 @@ describe('AuthenticationService Unit Tests', () => {
       update: vi.fn()
     };
 
+    stateRepoMock = {
+      get: vi.fn(async (key: string) => {
+        if (key === ApplicationStateKeys.EMERGENCY_RECOVERY_KEY_HASH) {
+          return await passwordHasher.hash('emergency-recovery-key-2026');
+        }
+        return null;
+      }),
+      set: vi.fn(),
+      isInitialized: vi.fn(async () => true),
+      setInitialized: vi.fn()
+    };
+
     auditServiceMock = {
       logEvent: vi.fn(async () => ({ id: 'evt-1' } as unknown as AuditEvent))
     } as unknown as AuditService;
@@ -99,6 +114,7 @@ describe('AuthenticationService Unit Tests', () => {
     authService = new AuthenticationService(
       userRepoMock,
       orgRepoMock,
+      stateRepoMock,
       passwordHasher,
       auditServiceMock,
       rbacEngine
@@ -199,5 +215,21 @@ describe('AuthenticationService Unit Tests', () => {
 
     await authService.logout(sessionToken);
     expect(authService.getSessionUser(sessionToken)).toBeNull();
+  });
+
+  it('should safely unlock locked Owner account using emergency recovery token', async () => {
+    mockUser.roles = [RoleName.OWNER];
+    mockUser.isLocked = true;
+    mockUser.failedLoginAttempts = 5;
+
+    const res = await authService.recoverOwnerAccount({
+      username: 'doctor_smith',
+      recoveryToken: 'emergency-recovery-key-2026',
+      newPassword: 'NewOwnerPassword123!'
+    });
+
+    expect(res.success).toBe(true);
+    expect(userRepoMock.resetFailedLogins).toHaveBeenCalledWith('user-1');
+    expect(userRepoMock.updatePassword).toHaveBeenCalled();
   });
 });

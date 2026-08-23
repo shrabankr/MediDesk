@@ -64,6 +64,7 @@ describe('Last Active Owner Protection Invariant Security Tests', () => {
     authService = new AuthenticationService(
       userRepo,
       orgRepo,
+      stateRepo,
       passwordHasher,
       auditService,
       rbacEngine
@@ -73,6 +74,7 @@ describe('Last Active Owner Protection Invariant Security Tests', () => {
       userRepo,
       orgRepo,
       roleRepo,
+      stateRepo,
       passwordHasher,
       auditService,
       rbacEngine

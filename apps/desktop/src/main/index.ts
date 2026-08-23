@@ -115,6 +115,7 @@ function initializeServices() {
   const authService = new AuthenticationService(
     userRepo,
     orgRepo,
+    stateRepo,
     passwordHasher,
     auditService,
     rbacEngine
@@ -124,6 +125,7 @@ function initializeServices() {
     userRepo,
     orgRepo,
     roleRepo,
+    stateRepo,
     passwordHasher,
     auditService,
     rbacEngine

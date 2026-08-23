@@ -88,4 +88,27 @@ export function registerAuthIpcHandlers(authService: AuthenticationService): voi
       }
     }
   );
+
+  // 4. Emergency Owner Recovery / Unlock
+  ipcMain.handle(
+    IPC_CHANNELS.AUTH_RECOVER_OWNER,
+    async (_event, request: unknown): Promise<IPCResponse<{ success: boolean; message: string }>> => {
+      try {
+        const result = await authService.recoverOwnerAccount(request as Parameters<typeof authService.recoverOwnerAccount>[0]);
+        return {
+          success: true,
+          data: result
+        };
+      } catch (error) {
+        logger.warn(`Owner recovery IPC error: ${(error as Error).message}`);
+        return {
+          success: false,
+          error: {
+            code: (error as Error).name || 'RECOVERY_ERROR',
+            message: (error as Error).message || 'Emergency recovery failed'
+          }
+        };
+      }
+    }
+  );
 }

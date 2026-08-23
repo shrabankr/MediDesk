@@ -63,6 +63,7 @@ describe('Authentication & User Management SQLite Integration', () => {
     authService = new AuthenticationService(
       userRepo,
       orgRepo,
+      stateRepo,
       passwordHasher,
       auditService,
       rbacEngine
@@ -72,6 +73,7 @@ describe('Authentication & User Management SQLite Integration', () => {
       userRepo,
       orgRepo,
       roleRepo,
+      stateRepo,
       passwordHasher,
       auditService,
       rbacEngine
