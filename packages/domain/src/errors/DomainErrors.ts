@@ -36,3 +36,25 @@ export class SystemNotInitializedError extends DomainError {
     this.name = 'SystemNotInitializedError';
   }
 }
+
+export class AuthenticationError extends DomainError {
+  constructor(message = 'Invalid username or password.') {
+    super(message);
+    this.name = 'AuthenticationError';
+  }
+}
+
+export class AccountLockedError extends DomainError {
+  constructor(message = 'Account is locked due to multiple failed login attempts. Please contact your Clinic Administrator.') {
+    super(message);
+    this.name = 'AccountLockedError';
+  }
+}
+
+export class AccountDisabledError extends DomainError {
+  constructor(message = 'Account has been disabled. Please contact your Clinic Administrator.') {
+    super(message);
+    this.name = 'AccountDisabledError';
+  }
+}
+

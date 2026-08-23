@@ -14,6 +14,28 @@ export interface AuthorizationContext {
 
 export class RBACEngine {
   /**
+   * Returns all combined permissions granted for a list of roles.
+   */
+  public getPermissionsForRoles(roles: RoleName[]): string[] {
+    const perms = new Set<string>();
+    for (const role of roles) {
+      const defaultPerms = DEFAULT_ROLE_PERMISSIONS[role] ?? [];
+      for (const p of defaultPerms) {
+        perms.add(p);
+      }
+    }
+    return Array.from(perms);
+  }
+
+  /**
+   * Evaluates if any of the roles grant the specified permission.
+   */
+  public evaluatePermission(roles: RoleName[], permission: string): boolean {
+    const perms = this.getPermissionsForRoles(roles);
+    return perms.includes(permission);
+  }
+
+  /**
    * Checks if an authorization context has a required permission.
    */
   public hasPermission(

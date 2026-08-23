@@ -25,3 +25,18 @@ export type CreateUserDTO = {
   passwordHash: string;
   roles: RoleName[];
 };
+
+export type SafeUser = Omit<User, 'passwordHash'>;
+
+export interface SessionUser extends SafeUser {
+  permissions: string[];
+  organizationName?: string;
+}
+
+export interface AuthSession {
+  sessionId: string;
+  user: SessionUser;
+  createdAt: Date;
+  expiresAt: Date;
+}
+

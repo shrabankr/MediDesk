@@ -1,4 +1,6 @@
-import { LicenseStatus } from '@medidesk/domain';
+import { LicenseStatus, SafeUser, SessionUser, RoleName } from '@medidesk/domain';
+
+export type { SafeUser, SessionUser };
 
 export const IPC_CHANNELS = {
   // System & Status
@@ -8,6 +10,21 @@ export const IPC_CHANNELS = {
 
   // Config & Diagnostics
   GET_ENVIRONMENT_INFO: 'config:get-environment-info',
+
+  // Authentication & Session
+  AUTH_LOGIN: 'auth:login',
+  AUTH_LOGOUT: 'auth:logout',
+  AUTH_GET_CURRENT_USER: 'auth:get-current-user',
+
+  // User Management
+  USER_LIST: 'user:list',
+  USER_CREATE: 'user:create',
+  USER_UPDATE: 'user:update',
+  USER_RESET_PASSWORD: 'user:reset-password',
+  USER_TOGGLE_STATUS: 'user:toggle-status',
+
+  // RBAC & Permissions
+  RBAC_GET_USER_PERMISSIONS: 'rbac:get-user-permissions',
 
   // Audit
   LOG_AUDIT_EVENT: 'audit:log-event',
@@ -61,4 +78,44 @@ export interface InitializationStateData {
   requiresDeveloperSetup: boolean;
   organizationCount: number;
   userCount: number;
+}
+
+export interface LoginResponseData {
+  user: SessionUser;
+  sessionToken: string;
+}
+
+export interface CreateUserRequest {
+  organizationId: string;
+  username: string;
+  email: string;
+  fullName: string;
+  password: string;
+  roles: RoleName[];
+}
+
+export interface UpdateUserRequest {
+  userId: string;
+  fullName?: string;
+  email?: string;
+  roles?: RoleName[];
+}
+
+export interface ResetPasswordRequest {
+  userId: string;
+  newPassword: string;
+}
+
+export interface ToggleUserStatusRequest {
+  userId: string;
+  isActive: boolean;
+}
+
+export interface UserPermissionsData {
+  userId: string;
+  username: string;
+  roles: RoleName[];
+  permissions: string[];
+  isOwner: boolean;
+  isDeveloper: boolean;
 }

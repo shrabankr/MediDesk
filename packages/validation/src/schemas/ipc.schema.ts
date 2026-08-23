@@ -1,6 +1,13 @@
 import { z } from 'zod';
 import { CreateOrganizationSchema } from './organization.schema.js';
 import { CreateAuditEventSchema } from './audit.schema.js';
+import {
+  CreateUserSchema,
+  UpdateUserSchema,
+  ResetPasswordSchema,
+  ToggleUserStatusSchema,
+  LoginRequestSchema
+} from './user.schema.js';
 
 export const InitializeSystemRequestSchema = z.object({
   organization: CreateOrganizationSchema,
@@ -14,6 +21,21 @@ export const InitializeSystemRequestSchema = z.object({
 });
 
 export type InitializeSystemRequestInput = z.infer<typeof InitializeSystemRequestSchema>;
+
+export const LoginIPCRequestSchema = LoginRequestSchema;
+export type LoginIPCRequestInput = z.infer<typeof LoginIPCRequestSchema>;
+
+export const CreateUserIPCRequestSchema = CreateUserSchema;
+export type CreateUserIPCRequestInput = z.infer<typeof CreateUserIPCRequestSchema>;
+
+export const UpdateUserIPCRequestSchema = UpdateUserSchema;
+export type UpdateUserIPCRequestInput = z.infer<typeof UpdateUserIPCRequestSchema>;
+
+export const ResetPasswordIPCRequestSchema = ResetPasswordSchema;
+export type ResetPasswordIPCRequestInput = z.infer<typeof ResetPasswordIPCRequestSchema>;
+
+export const ToggleUserStatusIPCRequestSchema = ToggleUserStatusSchema;
+export type ToggleUserStatusIPCRequestInput = z.infer<typeof ToggleUserStatusIPCRequestSchema>;
 
 export const LogAuditEventRequestSchema = CreateAuditEventSchema;
 export type LogAuditEventRequestInput = z.infer<typeof LogAuditEventRequestSchema>;

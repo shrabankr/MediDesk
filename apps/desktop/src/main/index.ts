@@ -15,9 +15,12 @@ import {
 } from '@medidesk/database';
 import { AuditService } from '@medidesk/audit';
 import { LicenseService } from '@medidesk/licensing';
+import { RBACEngine } from '@medidesk/authorization';
 import {
   StatusService,
   SystemInitializationService,
+  AuthenticationService,
+  UserManagementService,
   ScryptPasswordHasher
 } from '@medidesk/application';
 import { registerAllIpcHandlers } from './ipc/index.js';
@@ -81,15 +84,16 @@ function initializeServices() {
   // 3. Initialize Repositories
   const orgRepo = new SqliteOrganizationRepository(sqliteDb);
   const userRepo = new SqliteUserRepository(sqliteDb);
-  const _roleRepo = new SqliteRoleRepository(sqliteDb);
+  const roleRepo = new SqliteRoleRepository(sqliteDb);
   const _permRepo = new SqlitePermissionRepository(sqliteDb);
   const auditRepo = new SqliteAuditRepository(sqliteDb);
   const stateRepo = new SqliteApplicationStateRepository(sqliteDb);
 
-  // 4. Initialize Services
+  // 4. Initialize Services & Engines
   const auditService = new AuditService(auditRepo);
   const licenseService = new LicenseService(config.isDevelopment);
   const passwordHasher = new ScryptPasswordHasher();
+  const rbacEngine = new RBACEngine();
 
   const initService = new SystemInitializationService(
     orgRepo,
@@ -108,10 +112,29 @@ function initializeServices() {
     config
   );
 
+  const authService = new AuthenticationService(
+    userRepo,
+    orgRepo,
+    passwordHasher,
+    auditService,
+    rbacEngine
+  );
+
+  const userService = new UserManagementService(
+    userRepo,
+    orgRepo,
+    roleRepo,
+    passwordHasher,
+    auditService,
+    rbacEngine
+  );
+
   // 5. Register IPC Handlers
   registerAllIpcHandlers({
     statusService,
     initService,
+    authService,
+    userService,
     auditService,
     config
   });

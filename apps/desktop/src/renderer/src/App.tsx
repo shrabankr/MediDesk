@@ -1,96 +1,131 @@
-import React, { useEffect, useState } from 'react';
-import { Header } from './components/Header';
-import { SystemStatusCard } from './components/SystemStatusCard';
-import { SecurityCard } from './components/SecurityCard';
-import { PhaseRoadmapCard } from './components/PhaseRoadmapCard';
-import { SystemStatusData } from '@medidesk/shared';
+import React, { useEffect, useState, useCallback } from 'react';
+import { SetupWizard } from './components/SetupWizard';
+import { LoginScreen } from './components/LoginScreen';
+import { AppLayout, NavTab } from './components/AppLayout';
+import { DashboardView } from './components/DashboardView';
+import { UserManagementView } from './components/UserManagementView';
+import { AuditLogView } from './components/AuditLogView';
+import { RbacExplorerView } from './components/RbacExplorerView';
+import { SystemStatusData, InitializationStateData } from '@medidesk/shared';
+import { SessionUser } from '@medidesk/domain';
 
 export const App: React.FC = () => {
+  const [initState, setInitState] = useState<InitializationStateData | null>(null);
   const [status, setStatus] = useState<SystemStatusData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [currentUser, setCurrentUser] = useState<SessionUser | null>(null);
+  const [sessionToken, setSessionToken] = useState<string | null>(() => {
+    return sessionStorage.getItem('medidesk_session_token');
+  });
+  const [activeTab, setActiveTab] = useState<NavTab>('status');
 
-  const fetchStatus = async () => {
+  const fetchSystemState = useCallback(async () => {
     setLoading(true);
     try {
       if (window.mediDeskBridge) {
-        const response = await window.mediDeskBridge.getSystemStatus();
-        if (response.success && response.data) {
-          setStatus(response.data);
+        const [initRes, statusRes] = await Promise.all([
+          window.mediDeskBridge.getInitializationState(),
+          window.mediDeskBridge.getSystemStatus()
+        ]);
+
+        if (initRes.success && initRes.data) {
+          setInitState(initRes.data);
         }
-      } else {
-        // Fallback for standalone browser testing mode
-        setStatus({
-          appName: 'MediDesk',
-          version: '1.0.0',
-          database: {
-            status: 'connected',
-            databasePath: '%APPDATA%/MediDesk/data/medidesk.sqlite',
-            appliedMigrations: 1
-          },
-          application: {
-            status: 'ready',
-            initialized: false,
-            uptimeSeconds: 12
-          },
-          network: {
-            mode: 'offline_first',
-            internetRequired: false,
-            isOnline: false
-          },
-          licensing: {
-            status: 'TRIAL',
-            trialDaysRemaining: 60
-          },
-          security: {
-            contextIsolation: true,
-            nodeIntegration: false,
-            sandbox: true
-          },
-          environment: 'development'
-        });
+        if (statusRes.success && statusRes.data) {
+          setStatus(statusRes.data);
+        }
+
+        // Restore active session if sessionToken exists
+        if (sessionToken) {
+          const sessionRes = await window.mediDeskBridge.getCurrentUser(sessionToken);
+          if (sessionRes.success && sessionRes.data) {
+            setCurrentUser(sessionRes.data);
+          } else {
+            // Invalid/expired session
+            sessionStorage.removeItem('medidesk_session_token');
+            setSessionToken(null);
+            setCurrentUser(null);
+          }
+        }
       }
     } catch (err) {
-      console.error('Failed to fetch system status via IPC:', err);
+      console.error('Failed to load system state:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [sessionToken]);
 
   useEffect(() => {
-    fetchStatus();
-  }, []);
+    fetchSystemState();
+  }, [fetchSystemState]);
 
+  const handleLoginSuccess = (user: SessionUser, token: string) => {
+    setCurrentUser(user);
+    setSessionToken(token);
+    sessionStorage.setItem('medidesk_session_token', token);
+    fetchSystemState();
+  };
+
+  const handleLogout = async () => {
+    if (sessionToken && window.mediDeskBridge) {
+      try {
+        await window.mediDeskBridge.logout(sessionToken);
+      } catch (_err) {
+        // ignore
+      }
+    }
+    sessionStorage.removeItem('medidesk_session_token');
+    setSessionToken(null);
+    setCurrentUser(null);
+    setActiveTab('status');
+  };
+
+  const handleSetupComplete = () => {
+    fetchSystemState();
+  };
+
+  // 1. Loading State
+  if (loading && !initState && !status) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">
+        <div className="text-center space-y-3">
+          <div className="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs text-slate-400">Loading MediDesk secure environment...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. First-Run Setup Wizard (if database has not been initialized)
+  if (initState && !initState.isInitialized) {
+    return <SetupWizard onCompleted={handleSetupComplete} />;
+  }
+
+  // 3. Login Screen (if initialized but unauthenticated)
+  if (!currentUser || !sessionToken) {
+    return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+  }
+
+  // 4. Authenticated Application Shell
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 flex flex-col">
-      <Header />
+    <AppLayout
+      currentUser={currentUser}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      onLogout={handleLogout}
+    >
+      {activeTab === 'status' && (
+        <DashboardView status={status} loading={loading} onRefresh={fetchSystemState} />
+      )}
 
-      <main className="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8 space-y-6">
-        {/* Foundation Welcome Banner */}
-        <div className="rounded-2xl bg-gradient-to-r from-teal-900 via-teal-800 to-slate-900 p-6 text-white shadow-lg">
-          <div className="max-w-2xl space-y-2">
-            <h2 className="text-2xl font-bold tracking-tight text-white">
-              MediDesk Foundation Shell
-            </h2>
-            <p className="text-sm text-teal-100/90 leading-relaxed">
-              Production-quality desktop foundation initialized with Electron 33, React 18,
-              TypeScript strict mode, secure sandboxed IPC, and SQLite migrations.
-            </p>
-          </div>
-        </div>
+      {activeTab === 'users' && (
+        <UserManagementView currentUser={currentUser} sessionToken={sessionToken} />
+      )}
 
-        {/* Status and Diagnostics */}
-        <SystemStatusCard status={status} loading={loading} onRefresh={fetchStatus} />
+      {activeTab === 'audit' && <AuditLogView />}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <SecurityCard status={status} />
-          <PhaseRoadmapCard />
-        </div>
-      </main>
-
-      <footer className="border-t border-slate-200 bg-white px-8 py-3 text-center text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900">
-        MediDesk &copy; 2026 &bull; Offline-First Single-PC Architecture &bull; Phase 1 Foundation
-      </footer>
-    </div>
+      {activeTab === 'rbac' && <RbacExplorerView />}
+    </AppLayout>
   );
 };
 

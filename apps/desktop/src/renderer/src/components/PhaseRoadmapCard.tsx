@@ -4,8 +4,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, Badge } from
 
 export const PhaseRoadmapCard: React.FC = () => {
   const phases = [
-    { phase: 1, title: 'Project Initialization & Secure Foundation', status: 'CURRENT', desc: 'Monorepo, Electron Security, SQLite Migrations, Domain/RBAC Models, IPC Contracts' },
-    { phase: 2, title: 'First-Run Setup, Auth & User Management', status: 'PLANNED', desc: 'Setup Wizard, Scrypt Auth, Owner/Developer Separation, RBAC Enforcement, Audit Logging' },
+    { phase: 1, title: 'Project Initialization & Secure Foundation', status: 'COMPLETED', desc: 'Monorepo, Electron Security, SQLite Migrations, Domain/RBAC Models, IPC Contracts' },
+    { phase: 2, title: 'First-Run Setup, Auth & User Management', status: 'CURRENT', desc: 'Setup Wizard, Scrypt Auth, Owner/Developer Separation, RBAC Enforcement, Audit Logging' },
     { phase: 3, title: 'Patient, Doctor & Appointment Modules', status: 'FUTURE', desc: 'Patient demographics, scheduling, queue management' },
     { phase: 4, title: 'Clinical Consultation & Prescription', status: 'FUTURE', desc: 'Medical records, diagnosis, allergies, digital prescriptions' },
     { phase: 5, title: 'Pharmacy, Inventory & POS Billing', status: 'FUTURE', desc: 'Medicine master, batch tracking, invoicing, sales' },
@@ -56,16 +56,16 @@ export const PhaseRoadmapCard: React.FC = () => {
               </div>
 
               <div>
-                {p.status === 'CURRENT' && (
+                {p.status === 'COMPLETED' && (
                   <Badge variant="success" className="text-[10px] gap-1">
                     <CheckCircle className="h-3 w-3" />
-                    Current Phase
+                    Completed
                   </Badge>
                 )}
-                {p.status === 'PLANNED' && (
-                  <Badge variant="warning" className="text-[10px] gap-1">
+                {p.status === 'CURRENT' && (
+                  <Badge variant="primary" className="text-[10px] gap-1">
                     <Clock className="h-3 w-3" />
-                    Next: Phase 2
+                    Phase 2 (Active)
                   </Badge>
                 )}
                 {p.status === 'FUTURE' && (
