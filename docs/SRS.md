@@ -23,7 +23,7 @@ MediDesk is an offline-first Clinical and Pharmacy Management System built for s
 - **DOCTOR:** Medical practitioner authority. Clinical consultation, patient history, and electronic prescription writing.
 - **STAFF:** Operational and pharmacy dispensary staff. Patient check-in, POS billing, and medicine dispensing.
 - **DEVELOPER:** Technical and infrastructure authority. Database migrations, diagnostics, technical configuration, and local backup execution.
-  *CRITICAL RULE:* Developer does NOT possess clinical, patient, pharmacy, or financial data access rights. No `SUPER_ADMIN` universal bypass exists.
+  *CRITICAL RULE:* Developer has no default access to clinical, patient, pharmacy, or financial data. Temporary sensitive support access requires explicit Owner approval, limited scope, expiration, and audit logging. No `SUPER_ADMIN` universal bypass exists.
 
 ---
 

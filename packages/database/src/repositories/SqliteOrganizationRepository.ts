@@ -58,8 +58,8 @@ export class SqliteOrganizationRepository implements IOrganizationRepository {
     try {
       const row = raw.prepare('SELECT * FROM organizations ORDER BY created_at ASC LIMIT 1').get() as OrgRow | undefined;
       return row ? this.mapRow(row) : null;
-    } catch (error: any) {
-      if (error?.message?.includes('no such table')) {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message.includes('no such table')) {
         return null;
       }
       throw error;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, Lock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Shield, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Badge } from '@medidesk/ui';
 import { SystemStatusData } from '@medidesk/shared';
 
@@ -35,7 +35,8 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({ status }) => {
     },
     {
       title: 'Owner / Developer Separation',
-      description: 'Technical authority has zero bypass access to clinical, patient, or financial data.',
+      description:
+        'Developer has no default access to clinical, patient, pharmacy, or financial data. Temporary sensitive support access requires explicit Owner approval, limited scope, expiration, and audit logging.',
       active: true,
       key: 'roleSeparation'
     }

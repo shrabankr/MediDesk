@@ -1,5 +1,5 @@
 import React from 'react';
-import { Database, Cpu, Wifi, HardDrive, RefreshCw } from 'lucide-react';
+import { Database, Cpu, Wifi, RefreshCw } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, StatusIndicator, Badge, Button } from '@medidesk/ui';
 import { SystemStatusData } from '@medidesk/shared';
 

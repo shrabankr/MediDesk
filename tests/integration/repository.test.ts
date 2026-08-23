@@ -114,6 +114,14 @@ describe('SQLite Repositories Integration', () => {
     expect(recent[0]?.actor.username).toBe('clinician_1');
   });
 
+  it('should list system roles from role repository', async () => {
+    const roles = await roleRepo.listAll();
+    expect(roles.length).toBe(4);
+    const names = roles.map((r) => r.name);
+    expect(names).toContain(RoleName.OWNER);
+    expect(names).toContain(RoleName.DEVELOPER);
+  });
+
   it('should manage application state and initialization flag', async () => {
     expect(await stateRepo.isInitialized()).toBe(false);
 

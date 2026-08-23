@@ -20,6 +20,13 @@ describe('Domain Models & Values', () => {
     expect((RoleName as Record<string, string>)['SUPER_ADMIN']).toBeUndefined();
   });
 
+  it('should define granular permissions across categories', () => {
+    expect(PermissionCode.PATIENT_READ).toBe('patient.read');
+    expect(PermissionCode.SYSTEM_MIGRATE).toBe('system.migrate');
+    expect(PermissionCode.ORG_MANAGE).toBe('org.manage');
+    expect(PermissionCode.SALE_CREATE).toBe('sale.create');
+  });
+
   it('should define license statuses correctly', () => {
     expect(LicenseStatus.TRIAL).toBe('TRIAL');
     expect(LicenseStatus.ACTIVE).toBe('ACTIVE');

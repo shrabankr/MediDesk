@@ -22,8 +22,8 @@ export class SqliteApplicationStateRepository implements IApplicationStateReposi
     try {
       const row = raw.prepare('SELECT value FROM application_state WHERE key = ?').get(key) as StateRow | undefined;
       return row ? row.value : null;
-    } catch (error: any) {
-      if (error?.message?.includes('no such table')) {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message.includes('no such table')) {
         return null;
       }
       throw error;

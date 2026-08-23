@@ -192,8 +192,8 @@ export class SqliteUserRepository implements IUserRepository {
     try {
       const row = raw.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number } | undefined;
       return row ? row.count : 0;
-    } catch (error: any) {
-      if (error?.message?.includes('no such table')) {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message.includes('no such table')) {
         return 0;
       }
       throw error;

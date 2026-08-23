@@ -1,4 +1,5 @@
 import { app, BrowserWindow, session } from 'electron';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { loadConfig, Logger } from '@medidesk/shared';
@@ -80,8 +81,8 @@ function initializeServices() {
   // 3. Initialize Repositories
   const orgRepo = new SqliteOrganizationRepository(sqliteDb);
   const userRepo = new SqliteUserRepository(sqliteDb);
-  const roleRepo = new SqliteRoleRepository(sqliteDb);
-  const permRepo = new SqlitePermissionRepository(sqliteDb);
+  const _roleRepo = new SqliteRoleRepository(sqliteDb);
+  const _permRepo = new SqlitePermissionRepository(sqliteDb);
   const auditRepo = new SqliteAuditRepository(sqliteDb);
   const stateRepo = new SqliteApplicationStateRepository(sqliteDb);
 
@@ -119,7 +120,9 @@ function initializeServices() {
 }
 
 async function createWindow(): Promise<BrowserWindow> {
-  const preloadPath = path.join(__dirname, '../preload/index.js');
+  const preloadCandidateMjs = path.join(__dirname, '../preload/index.mjs');
+  const preloadCandidateJs = path.join(__dirname, '../preload/index.js');
+  const preloadPath = fs.existsSync(preloadCandidateMjs) ? preloadCandidateMjs : preloadCandidateJs;
   logger.info(`Creating BrowserWindow with preload: ${preloadPath}`);
 
   mainWindow = new BrowserWindow({

@@ -1,4 +1,4 @@
-import { z, ZodError } from 'zod';
+import { z } from 'zod';
 import { ValidationError } from '@medidesk/domain';
 
 export type ValidationResult<T> =
