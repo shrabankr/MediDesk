@@ -9,9 +9,12 @@
     "apps/*"
   ],
   "scripts": {
+    "predev": "electron-rebuild -f -w better-sqlite3",
     "dev": "npm --workspace=@medidesk/desktop run dev",
+    "prebuild": "electron-rebuild -f -w better-sqlite3",
     "build": "npm --workspace=@medidesk/desktop run build",
     "package:win": "npm --workspace=@medidesk/desktop run package:win",
+    "pretest": "npm rebuild better-sqlite3",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:unit": "vitest run tests/unit packages/",
