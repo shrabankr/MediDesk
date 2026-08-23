@@ -1,0 +1,1 @@
+{"version":3,"file":"ApplicationState.js","sourceRoot":"","sources":["ApplicationState.ts"],"names":[],"mappings":"AAMA,MAAM,CAAC,MAAM,oBAAoB,GAAG;IAClC,WAAW,EAAE,oBAAoB;IACjC,cAAc,EAAE,uBAAuB;IACvC,gBAAgB,EAAE,yBAAyB;IAC3C,cAAc,EAAE,uBAAuB;IACvC,eAAe,EAAE,wBAAwB;CACjC,CAAC"}

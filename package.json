@@ -1,0 +1,56 @@
+{
+  "name": "medidesk-root",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MediDesk - Offline-First Clinical & Pharmacy Management Platform",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm --workspace=@medidesk/desktop run dev",
+    "build": "npm --workspace=@medidesk/desktop run build",
+    "package:win": "npm --workspace=@medidesk/desktop run package:win",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run tests/unit packages/",
+    "test:integration": "vitest run tests/integration",
+    "test:security": "vitest run tests/security",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "electron",
+    "react",
+    "typescript",
+    "sqlite",
+    "offline-first",
+    "healthcare"
+  ],
+  "author": "MediDesk Engineering Team",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.10.1",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "playwright": "^1.49.0",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.6.3",
+    "vite": "^6.0.1",
+    "vitest": "^2.1.8",
+    "wait-on": "^8.0.1"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.468.0",
+    "tailwind-merge": "^2.5.5",
+    "zod": "^3.23.8"
+  }
+}
