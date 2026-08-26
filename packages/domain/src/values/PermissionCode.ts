@@ -104,7 +104,16 @@ export const PermissionCode = {
   SYSTEM_RESTORE_EXECUTE: 'system.restore.execute',
   SYSTEM_LICENSE_READ: 'system.license.read',
   SYSTEM_LICENSE_ACTIVATE: 'system.license.activate',
-  PRINTER_MANAGE: 'printer.manage'
+  PRINTER_MANAGE: 'printer.manage',
+
+  // Phase 8 Permissions
+  ALERT_READ: 'alert.read',
+  ALERT_MANAGE: 'alert.manage',
+  ALERT_ACKNOWLEDGE: 'alert.acknowledge',
+  DASHBOARD_MANAGE: 'dashboard.manage',
+  PACKAGING_MANAGE: 'packaging.manage',
+  BACKUP_SCHEDULE: 'backup.schedule',
+  DOCUMENT_DISPATCH: 'document.dispatch'
 } as const;
 
 export type PermissionCode = (typeof PermissionCode)[keyof typeof PermissionCode];

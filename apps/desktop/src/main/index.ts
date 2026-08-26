@@ -37,7 +37,12 @@ import {
   SqliteLicenseRepository,
   SqlitePrinterConfigRepository,
   SqliteLanDeviceRepository,
-  SqliteLanServerConfigRepository
+  SqliteLanServerConfigRepository,
+  SqlitePackagingUnitRepository,
+  SqliteSystemAlertRepository,
+  SqliteAlertConfigRepository,
+  SqliteDashboardPreferenceRepository,
+  SqliteScheduledBackupConfigRepository
 } from '@medidesk/database';
 import { AuditService } from '@medidesk/audit';
 import { LicenseService } from '@medidesk/licensing';
@@ -60,6 +65,11 @@ import {
   SupplierPurchaseService,
   InventoryService,
   PharmacyBillingService,
+  PackagingUnitService,
+  SmartAlertService,
+  DashboardService,
+  DocumentDeliveryService,
+  ScheduledBackupService,
   ScryptPasswordHasher
 } from '@medidesk/application';
 import { registerAllIpcHandlers } from './ipc/index.js';
@@ -291,6 +301,19 @@ function initializeServices() {
     organizationId: 'default-org'
   });
 
+  // Phase 8: Packaging, Alerts, Dashboard, Document Delivery, Backup Scheduler
+  const packagingRepo = new SqlitePackagingUnitRepository(sqliteDb);
+  const alertRepo = new SqliteSystemAlertRepository(sqliteDb);
+  const alertConfigRepo = new SqliteAlertConfigRepository(sqliteDb);
+  const dashboardPrefRepo = new SqliteDashboardPreferenceRepository(sqliteDb);
+  const scheduledBackupRepo = new SqliteScheduledBackupConfigRepository(sqliteDb);
+
+  const packagingService = new PackagingUnitService(packagingRepo, productRepo, auditService);
+  const smartAlertService = new SmartAlertService(alertRepo, alertConfigRepo, auditService);
+  const dashboardService = new DashboardService(dashboardPrefRepo, auditService);
+  const documentDeliveryService = new DocumentDeliveryService(printService, auditService);
+  const scheduledBackupService = new ScheduledBackupService(scheduledBackupRepo, backupService, auditService);
+
   // 5. Register IPC Handlers
   registerAllIpcHandlers({
     statusService,
@@ -316,6 +339,11 @@ function initializeServices() {
     securityManager: lanSecurityManager,
     lanConfigRepo,
     lanDeviceRepo,
+    packagingService,
+    smartAlertService,
+    dashboardService,
+    documentDeliveryService,
+    scheduledBackupService,
     auditService,
     config
   });

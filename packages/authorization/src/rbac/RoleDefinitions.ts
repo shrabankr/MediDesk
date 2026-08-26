@@ -79,7 +79,14 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, PermissionCode[]> = {
     PermissionCode.SYSTEM_RESTORE_EXECUTE,
     PermissionCode.SYSTEM_LICENSE_READ,
     PermissionCode.SYSTEM_LICENSE_ACTIVATE,
-    PermissionCode.PRINTER_MANAGE
+    PermissionCode.PRINTER_MANAGE,
+    PermissionCode.ALERT_READ,
+    PermissionCode.ALERT_MANAGE,
+    PermissionCode.ALERT_ACKNOWLEDGE,
+    PermissionCode.DASHBOARD_MANAGE,
+    PermissionCode.PACKAGING_MANAGE,
+    PermissionCode.BACKUP_SCHEDULE,
+    PermissionCode.DOCUMENT_DISPATCH
   ],
   [RoleName.DOCTOR]: [
     PermissionCode.USER_READ,
@@ -121,7 +128,11 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, PermissionCode[]> = {
     PermissionCode.BATCH_READ,
     PermissionCode.REPORT_READ,
     PermissionCode.PRINTER_MANAGE,
-    PermissionCode.SYSTEM_LICENSE_READ
+    PermissionCode.SYSTEM_LICENSE_READ,
+    PermissionCode.ALERT_READ,
+    PermissionCode.ALERT_ACKNOWLEDGE,
+    PermissionCode.DASHBOARD_MANAGE,
+    PermissionCode.DOCUMENT_DISPATCH
   ],
   [RoleName.STAFF]: [
     PermissionCode.USER_READ,
@@ -154,7 +165,12 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, PermissionCode[]> = {
     PermissionCode.SALE_RETURN,
     PermissionCode.REPORT_READ,
     PermissionCode.PRINTER_MANAGE,
-    PermissionCode.SYSTEM_LICENSE_READ
+    PermissionCode.SYSTEM_LICENSE_READ,
+    PermissionCode.ALERT_READ,
+    PermissionCode.ALERT_ACKNOWLEDGE,
+    PermissionCode.DASHBOARD_MANAGE,
+    PermissionCode.PACKAGING_MANAGE,
+    PermissionCode.DOCUMENT_DISPATCH
   ],
   [RoleName.DEVELOPER]: [
     // Developer has technical authority ONLY.
@@ -166,7 +182,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, PermissionCode[]> = {
     PermissionCode.SYSTEM_BACKUP_LOCAL,
     PermissionCode.SYSTEM_BACKUP_CREATE,
     PermissionCode.SYSTEM_BACKUP_READ,
-    PermissionCode.SYSTEM_LICENSE_READ
+    PermissionCode.SYSTEM_LICENSE_READ,
+    PermissionCode.ALERT_READ,
+    PermissionCode.ALERT_ACKNOWLEDGE
   ]
 };
 
@@ -234,5 +252,8 @@ export const RESTRICTED_DEVELOPER_PERMISSIONS: PermissionCode[] = [
   PermissionCode.ORG_MANAGE,
   PermissionCode.ROLE_ASSIGN,
   PermissionCode.SYSTEM_RESTORE_EXECUTE,
-  PermissionCode.SYSTEM_LICENSE_ACTIVATE
+  PermissionCode.SYSTEM_LICENSE_ACTIVATE,
+  PermissionCode.PACKAGING_MANAGE,
+  PermissionCode.BACKUP_SCHEDULE,
+  PermissionCode.DOCUMENT_DISPATCH
 ];

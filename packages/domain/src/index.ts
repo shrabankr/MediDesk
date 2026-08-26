@@ -67,9 +67,21 @@ export * from './entities/LanDevice.js';
 export * from './repositories/ILanDeviceRepository.js';
 export * from './repositories/ILanServerConfigRepository.js';
 
+// Phase 8 Entities & Repositories
+export * from './entities/PackagingUnit.js';
+export * from './entities/Alert.js';
+export * from './entities/DashboardPreference.js';
+export * from './entities/ScheduledBackupConfig.js';
+export * from './repositories/IPackagingUnitRepository.js';
+export * from './repositories/ISystemAlertRepository.js';
+export * from './repositories/IAlertConfigRepository.js';
+export * from './repositories/IDashboardPreferenceRepository.js';
+export * from './repositories/IScheduledBackupConfigRepository.js';
+
 // Services
 export * from './services/IPasswordHasher.js';
 
 // Errors
 export * from './errors/DomainErrors.js';
+
 

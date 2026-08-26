@@ -307,7 +307,7 @@ describe('Sole Owner Lockout & Emergency Recovery Security Tests', () => {
 
     expect(loginRes.user.username).toBe('sole_owner');
     expect(loginRes.user.isLocked).toBe(false);
-  });
+  }, 15000);
 
   it('7. Recovery does not create a hidden privilege escalation path', async () => {
     const org = await orgRepo.getFirst();

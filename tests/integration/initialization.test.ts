@@ -80,7 +80,7 @@ describe('System Initialization End-to-End Orchestration', () => {
 
     expect(result.organizationId).toBeDefined();
     expect(result.ownerId).toBeDefined();
-    expect(result.migrationsApplied).toBe(7);
+    expect(result.migrationsApplied).toBe(8);
 
     // Verify post-initialization state
     const postState = await initService.getInitializationState();

@@ -606,6 +606,67 @@ export const mediDeskBridge = {
 
   getLanStatus: async (sessionToken?: string): Promise<IPCResponse<any>> => {
     return ipcRenderer.invoke(IPC_CHANNELS.LAN_GET_STATUS, sessionToken);
+  },
+
+  // Phase 8: Multi-tier Packaging, Smart Alerts, Dashboards, Document Dispatch & Backup Scheduling
+  createPackagingUnit: async (dto: any): Promise<IPCResponse<any>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.PACKAGING_CREATE, dto);
+  },
+
+  getPackagingUnitsByProduct: async (productId: string): Promise<IPCResponse<any>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.PACKAGING_GET_BY_PRODUCT, productId);
+  },
+
+  updatePackagingUnit: async (id: string, dto: any): Promise<IPCResponse<any>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.PACKAGING_UPDATE, { id, dto });
+  },
+
+  deletePackagingUnit: async (id: string): Promise<IPCResponse<any>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.PACKAGING_DELETE, id);
+  },
+
+  convertPackagingQuantity: async (productId: string, unitName: string, packageQuantity: number): Promise<IPCResponse<any>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.PACKAGING_CONVERT, { productId, unitName, packageQuantity });
+  },
+
+  getActiveAlerts: async (limit?: number): Promise<IPCResponse<any>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.ALERTS_GET_ACTIVE, limit);
+  },
+
+  acknowledgeAlert: async (alertId: string, snoozeHours?: number): Promise<IPCResponse<any>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.ALERTS_ACKNOWLEDGE, { alertId, snoozeHours });
+  },
+
+  resolveAlert: async (alertId: string): Promise<IPCResponse<any>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.ALERTS_RESOLVE, alertId);
+  },
+
+  configureAlertPolicy: async (alertType: string, dto: any): Promise<IPCResponse<any>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.ALERTS_CONFIGURE_POLICY, { alertType, dto });
+  },
+
+  getAlertConfigurations: async (): Promise<IPCResponse<any>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.ALERTS_GET_CONFIGS);
+  },
+
+  getDashboardLayout: async (): Promise<IPCResponse<any>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.DASHBOARD_GET_LAYOUT);
+  },
+
+  saveDashboardLayout: async (layout: Record<string, any>): Promise<IPCResponse<any>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.DASHBOARD_SAVE_LAYOUT, layout);
+  },
+
+  dispatchDocument: async (request: any): Promise<IPCResponse<any>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.DOCUMENT_DISPATCH, request);
+  },
+
+  getBackupSchedule: async (): Promise<IPCResponse<any>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.BACKUP_GET_SCHEDULE);
+  },
+
+  updateBackupSchedule: async (dto: any): Promise<IPCResponse<any>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.BACKUP_UPDATE_SCHEDULE, dto);
   }
 };
 
@@ -613,3 +674,4 @@ export type MediDeskBridge = typeof mediDeskBridge;
 
 // Expose safe API to renderer
 contextBridge.exposeInMainWorld('mediDeskBridge', mediDeskBridge);
+

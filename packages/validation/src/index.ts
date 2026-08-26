@@ -19,5 +19,11 @@ export * from './schemas/purchase.schema.js';
 export * from './schemas/sale.schema.js';
 export * from './schemas/tax_rule.schema.js';
 export * from './schemas/ipc.schema.js';
+export * from './schemas/packaging_unit.schema.js';
+export * from './schemas/alert.schema.js';
+export * from './schemas/dashboard_preference.schema.js';
+export * from './schemas/backup_schedule.schema.js';
+export * from './schemas/document_dispatch.schema.js';
 export * from './helpers.js';
+
 

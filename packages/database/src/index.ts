@@ -32,4 +32,10 @@ export * from './repositories/SqliteLicenseRepository.js';
 export * from './repositories/SqlitePrinterConfigRepository.js';
 export * from './repositories/SqliteLanDeviceRepository.js';
 export * from './repositories/SqliteLanServerConfigRepository.js';
+export * from './repositories/SqlitePackagingUnitRepository.js';
+export * from './repositories/SqliteSystemAlertRepository.js';
+export * from './repositories/SqliteAlertConfigRepository.js';
+export * from './repositories/SqliteDashboardPreferenceRepository.js';
+export * from './repositories/SqliteScheduledBackupConfigRepository.js';
+
 

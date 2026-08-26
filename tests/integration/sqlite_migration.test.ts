@@ -36,10 +36,10 @@ describe('SQLite Database & MigrationRunner Integration', () => {
 
   it('should run migrations and seed foundational roles, permissions, and Phase 6/7 schema', () => {
     const applied = runner.runPendingMigrations();
-    expect(applied).toBe(7);
+    expect(applied).toBe(8);
 
     const history = runner.getAppliedMigrations();
-    expect(history.length).toBe(7);
+    expect(history.length).toBe(8);
     expect(history[0]?.version).toBe('001');
     expect(history[1]?.version).toBe('002');
     expect(history[2]?.version).toBe('003');
@@ -47,6 +47,7 @@ describe('SQLite Database & MigrationRunner Integration', () => {
     expect(history[4]?.version).toBe('005');
     expect(history[5]?.version).toBe('006');
     expect(history[6]?.version).toBe('007');
+    expect(history[7]?.version).toBe('008');
 
     // Verify tables exist
     const raw = db.getRawDb();
@@ -100,6 +101,13 @@ describe('SQLite Database & MigrationRunner Integration', () => {
     expect(tableNames).toContain('lan_devices');
     expect(tableNames).toContain('lan_pairing_pins');
     expect(tableNames).toContain('lan_server_config');
+
+    // Phase 8 Tables
+    expect(tableNames).toContain('product_packaging_units');
+    expect(tableNames).toContain('system_alerts');
+    expect(tableNames).toContain('alert_configurations');
+    expect(tableNames).toContain('user_dashboard_preferences');
+    expect(tableNames).toContain('scheduled_backup_configs');
 
     // Verify seeded roles
     const roles = raw.prepare('SELECT name FROM roles ORDER BY name ASC').all() as Array<{ name: string }>;

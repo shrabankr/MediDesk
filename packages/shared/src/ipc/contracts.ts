@@ -288,7 +288,24 @@ export const IPC_CHANNELS = {
   LAN_APPROVE_DEVICE: 'lan:approve-device',
   LAN_REVOKE_DEVICE: 'lan:revoke-device',
   LAN_LIST_DEVICES: 'lan:list-devices',
-  LAN_GET_STATUS: 'lan:get-status'
+  LAN_GET_STATUS: 'lan:get-status',
+
+  // Phase 8: Multi-tier Packaging, Smart Alerts, Dashboards, Document Dispatch & Backup Scheduling
+  PACKAGING_CREATE: 'packaging:create',
+  PACKAGING_GET_BY_PRODUCT: 'packaging:get-by-product',
+  PACKAGING_UPDATE: 'packaging:update',
+  PACKAGING_DELETE: 'packaging:delete',
+  PACKAGING_CONVERT: 'packaging:convert',
+  ALERTS_GET_ACTIVE: 'alerts:get-active',
+  ALERTS_ACKNOWLEDGE: 'alerts:acknowledge',
+  ALERTS_RESOLVE: 'alerts:resolve',
+  ALERTS_CONFIGURE_POLICY: 'alerts:configure-policy',
+  ALERTS_GET_CONFIGS: 'alerts:get-configs',
+  DASHBOARD_GET_LAYOUT: 'dashboard:get-layout',
+  DASHBOARD_SAVE_LAYOUT: 'dashboard:save-layout',
+  DOCUMENT_DISPATCH: 'document:dispatch',
+  BACKUP_GET_SCHEDULE: 'system:backup-get-schedule',
+  BACKUP_UPDATE_SCHEDULE: 'system:backup-update-schedule'
 } as const;
 
 export interface SystemStatusData {

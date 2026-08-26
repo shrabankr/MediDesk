@@ -83,6 +83,10 @@ export class GoogleDriveProvider implements IGoogleDriveProvider {
   public async isOnline(): Promise<boolean> {
     if (this.forceOffline) return false;
 
+    if (!this.clientId || !this.clientSecret) {
+      return !this.forceOffline;
+    }
+
     // Check internet connectivity by querying Google API endpoint with timeout
     try {
       const controller = new AbortController();

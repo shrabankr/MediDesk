@@ -32,6 +32,14 @@ import { BackupService } from '@medidesk/backup';
 import { LicenseService } from '@medidesk/licensing';
 import { PrintService } from '@medidesk/printing';
 import { SqlitePrinterConfigRepository } from '@medidesk/database';
+import { registerPhase8IpcHandlers } from './phase8.ipc.js';
+import {
+  PackagingUnitService,
+  SmartAlertService,
+  DashboardService,
+  DocumentDeliveryService,
+  ScheduledBackupService
+} from '@medidesk/application';
 import { IAuditService } from '@medidesk/audit';
 import { AppConfig } from '@medidesk/shared';
 
@@ -59,6 +67,11 @@ export interface RegisterIpcOptions {
   securityManager?: any;
   lanConfigRepo?: any;
   lanDeviceRepo?: any;
+  packagingService?: PackagingUnitService;
+  smartAlertService?: SmartAlertService;
+  dashboardService?: DashboardService;
+  documentDeliveryService?: DocumentDeliveryService;
+  scheduledBackupService?: ScheduledBackupService;
   auditService: IAuditService;
   config: AppConfig;
 }
@@ -96,6 +109,22 @@ export function registerAllIpcHandlers(options: RegisterIpcOptions): void {
       options.authService,
       options.lanConfigRepo,
       options.lanDeviceRepo
+    );
+  }
+  if (
+    options.packagingService &&
+    options.smartAlertService &&
+    options.dashboardService &&
+    options.documentDeliveryService &&
+    options.scheduledBackupService
+  ) {
+    registerPhase8IpcHandlers(
+      options.packagingService,
+      options.smartAlertService,
+      options.dashboardService,
+      options.documentDeliveryService,
+      options.scheduledBackupService,
+      options.authService
     );
   }
   registerAuditIpc(options.auditService);
