@@ -6,12 +6,34 @@ import {
   Shield,
   LogOut,
   Building,
-  WifiOff
+  WifiOff,
+  Calendar,
+  UserCheck,
+  Stethoscope,
+  FileText,
+  ShoppingCart,
+  Pill,
+  Boxes,
+  Truck,
+  Settings
 } from 'lucide-react';
 import { Button, Badge } from '@medidesk/ui';
 import { SessionUser, RoleName } from '@medidesk/domain';
 
-export type NavTab = 'status' | 'users' | 'audit' | 'rbac';
+export type NavTab =
+  | 'dashboard'
+  | 'appointments'
+  | 'patients'
+  | 'doctors'
+  | 'consultation'
+  | 'pos'
+  | 'medicines'
+  | 'inventory'
+  | 'purchases'
+  | 'settings'
+  | 'users'
+  | 'audit'
+  | 'rbac';
 
 interface AppLayoutProps {
   currentUser: SessionUser;
@@ -28,9 +50,17 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   onLogout,
   children
 }) => {
-
   const tabs: Array<{ id: NavTab; label: string; icon: React.ComponentType<{ className?: string }> }> = [
-    { id: 'status', label: 'System Status', icon: Activity },
+    { id: 'dashboard', label: 'Dashboard', icon: Activity },
+    { id: 'pos', label: 'Pharmacy POS', icon: ShoppingCart },
+    { id: 'medicines', label: 'Medicine Master', icon: Pill },
+    { id: 'inventory', label: 'Inventory & Stock', icon: Boxes },
+    { id: 'purchases', label: 'Purchases & Inward', icon: Truck },
+    { id: 'appointments', label: 'Appointments & Queue', icon: Calendar },
+    { id: 'patients', label: 'Patients', icon: UserCheck },
+    { id: 'doctors', label: 'Doctors', icon: Stethoscope },
+    { id: 'consultation', label: 'Clinical Consultation', icon: FileText },
+    { id: 'settings', label: 'System & Settings', icon: Settings },
     { id: 'users', label: 'User Management', icon: Users },
     { id: 'audit', label: 'Audit Trail', icon: ShieldCheck },
     { id: 'rbac', label: 'RBAC Policy', icon: Shield }
@@ -45,26 +75,26 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
             {/* Left: Branding & Org */}
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-teal-600 rounded-lg text-white shadow-sm">
+                <div className="p-1.5 bg-blue-600 rounded-lg text-white shadow-sm">
                   <Activity className="h-4 w-4" />
                 </div>
                 <span className="font-bold text-sm tracking-tight text-slate-900 dark:text-white">MediDesk</span>
-                <Badge variant="secondary" className="text-[10px] py-0 px-1.5">
-                  v1.0 (Phase 2)
+                <Badge variant="secondary" className="text-[10px] py-0 px-1.5 bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                  v1.0 (Phase 4)
                 </Badge>
               </div>
 
               <div className="h-4 w-px bg-slate-200 dark:bg-slate-800" />
 
               <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
-                <Building className="h-3.5 w-3.5 text-teal-600" />
+                <Building className="h-3.5 w-3.5 text-blue-600" />
                 <span className="font-semibold">{currentUser.organizationName || 'Clinic'}</span>
               </div>
             </div>
 
             {/* Right: Badges, User Profile & Logout */}
             <div className="flex items-center gap-3">
-              <Badge variant="outline" className="text-[10px] flex items-center gap-1 border-teal-700/50 text-teal-700 dark:text-teal-400">
+              <Badge variant="outline" className="text-[10px] flex items-center gap-1 border-blue-700/50 text-blue-700 dark:text-blue-400">
                 <WifiOff className="h-3 w-3" />
                 Offline-First Mode
               </Badge>
@@ -90,7 +120,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                   </div>
                 </div>
 
-                <div className="w-8 h-8 rounded-full bg-teal-600 text-white font-bold text-xs flex items-center justify-center shadow-sm">
+                <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-sm">
                   {currentUser.fullName.charAt(0).toUpperCase()}
                 </div>
               </div>
@@ -108,7 +138,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           </div>
 
           {/* Navigation Tabs */}
-          <div className="flex items-center gap-1 border-t border-slate-100 dark:border-slate-800/80 -mb-px">
+          <div className="flex items-center gap-1 border-t border-slate-100 dark:border-slate-800/80 -mb-px overflow-x-auto">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const active = activeTab === tab.id;
@@ -116,9 +146,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                 <button
                   key={tab.id}
                   onClick={() => onTabChange(tab.id)}
-                  className={`flex items-center gap-1.5 py-2.5 px-3.5 text-xs font-medium border-b-2 transition-all ${
+                  className={`flex items-center gap-1.5 py-2.5 px-3.5 text-xs font-medium border-b-2 transition-all whitespace-nowrap ${
                     active
-                      ? 'border-teal-600 text-teal-600 dark:text-teal-400 font-semibold'
+                      ? 'border-blue-600 text-blue-600 dark:text-blue-400 font-semibold'
                       : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 hover:border-slate-300'
                   }`}
                 >
@@ -138,7 +168,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
       {/* Footer */}
       <footer className="border-t border-slate-200 dark:border-slate-800 py-3 text-center text-[11px] text-slate-400">
-        MediDesk © 2026 • Offline-First Single-PC Architecture • Phase 2 Verified Auth & RBAC
+        MediDesk © 2026 • Offline-First Single-PC Architecture • Phase 4 Clinical Consultation & Prescriptions
       </footer>
     </div>
   );

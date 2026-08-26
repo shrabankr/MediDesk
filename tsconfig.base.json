@@ -27,7 +27,9 @@
       "@medidesk/ui": ["packages/ui/src"],
       "@medidesk/ui/*": ["packages/ui/src/*"],
       "@medidesk/application": ["packages/application/src"],
-      "@medidesk/application/*": ["packages/application/src/*"]
+      "@medidesk/application/*": ["packages/application/src/*"],
+      "@medidesk/lan": ["packages/lan/src"],
+      "@medidesk/lan/*": ["packages/lan/src/*"]
     },
     "resolveJsonModule": true,
     "isolatedModules": true,

@@ -43,7 +43,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       }
 
       if (response.data) {
-        onLoginSuccess(response.data.user, response.data.sessionToken);
+        onLoginSuccess(response.data.user, response.data.sessionToken || response.data.token || '');
       }
     } catch (err) {
       setErrorMessage((err as Error).message);

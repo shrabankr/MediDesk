@@ -11,16 +11,55 @@ import {
   SqliteRoleRepository,
   SqlitePermissionRepository,
   SqliteAuditRepository,
-  SqliteApplicationStateRepository
+  SqliteApplicationStateRepository,
+  SqlitePatientRepository,
+  SqliteDoctorRepository,
+  SqliteAppointmentRepository,
+  SqliteClinicalVisitRepository,
+  SqliteVitalsRepository,
+  SqliteAllergyRepository,
+  SqliteMedicalHistoryRepository,
+  SqliteDiagnosisRepository,
+  SqlitePrescriptionRepository,
+  SqliteFollowUpRepository,
+  SqliteClinicalCorrectionRepository,
+  SqliteMedicineRepository,
+  SqliteMedicineProductRepository,
+  SqliteSupplierRepository,
+  SqliteInventoryBatchRepository,
+  SqliteStockMovementRepository,
+  SqlitePurchaseRepository,
+  SqliteSaleRepository,
+  SqliteSaleReturnRepository,
+  SqliteTaxRuleRepository,
+  SqliteBackupLogRepository,
+  SqliteBackupSettingsRepository,
+  SqliteLicenseRepository,
+  SqlitePrinterConfigRepository,
+  SqliteLanDeviceRepository,
+  SqliteLanServerConfigRepository
 } from '@medidesk/database';
 import { AuditService } from '@medidesk/audit';
 import { LicenseService } from '@medidesk/licensing';
+import { BackupService } from '@medidesk/backup';
+import { PrintService } from '@medidesk/printing';
+import { LanServer, LanClientGateway, LanSecurityManager } from '@medidesk/lan';
 import { RBACEngine } from '@medidesk/authorization';
 import {
   StatusService,
   SystemInitializationService,
   AuthenticationService,
   UserManagementService,
+  PatientService,
+  DoctorService,
+  AppointmentService,
+  ClinicalVisitService,
+  PrescriptionService,
+  PatientMedicalRecordService,
+  MedicineMasterService,
+  SupplierPurchaseService,
+  InventoryService,
+  PharmacyBillingService,
   ScryptPasswordHasher
 } from '@medidesk/application';
 import { registerAllIpcHandlers } from './ipc/index.js';
@@ -32,21 +71,11 @@ const logger = new Logger('ElectronMain');
 let mainWindow: BrowserWindow | null = null;
 let sqliteDb: SqliteDatabase | null = null;
 
-// The built directory structure
-//
-// ├─┬ dist
-// │ ├─┬ main
-// │ │ └── index.js
-// │ ├─┬ preload
-// │ │ └── index.js
-// │ └─┬ renderer
-// │   └── index.html
-
-const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 const config = loadConfig();
 
-function setupSecurityHeaders(): void {
-  // Enforce strict Content Security Policy
+function setupSecurityHeaders() {
+  const isDev = config.isDevelopment;
+
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
@@ -88,12 +117,38 @@ function initializeServices() {
   const _permRepo = new SqlitePermissionRepository(sqliteDb);
   const auditRepo = new SqliteAuditRepository(sqliteDb);
   const stateRepo = new SqliteApplicationStateRepository(sqliteDb);
+  const patientRepo = new SqlitePatientRepository(sqliteDb);
+  const doctorRepo = new SqliteDoctorRepository(sqliteDb);
+  const appointmentRepo = new SqliteAppointmentRepository(sqliteDb);
+  const visitRepo = new SqliteClinicalVisitRepository(sqliteDb);
+  const vitalsRepo = new SqliteVitalsRepository(sqliteDb);
+  const allergyRepo = new SqliteAllergyRepository(sqliteDb);
+  const historyRepo = new SqliteMedicalHistoryRepository(sqliteDb);
+  const diagnosisRepo = new SqliteDiagnosisRepository(sqliteDb);
+  const rxRepo = new SqlitePrescriptionRepository(sqliteDb);
+  const followUpRepo = new SqliteFollowUpRepository(sqliteDb);
+  const correctionRepo = new SqliteClinicalCorrectionRepository(sqliteDb);
+  const medicineRepo = new SqliteMedicineRepository(sqliteDb);
+  const productRepo = new SqliteMedicineProductRepository(sqliteDb);
+  const supplierRepo = new SqliteSupplierRepository(sqliteDb);
+  const batchRepo = new SqliteInventoryBatchRepository(sqliteDb);
+  const movementRepo = new SqliteStockMovementRepository(sqliteDb);
+  const purchaseRepo = new SqlitePurchaseRepository(sqliteDb);
+  const saleRepo = new SqliteSaleRepository(sqliteDb);
+  const saleReturnRepo = new SqliteSaleReturnRepository(sqliteDb);
+  const backupRepo = new SqliteBackupLogRepository(sqliteDb);
+  const backupSettingsRepo = new SqliteBackupSettingsRepository(sqliteDb);
+  const licenseRepo = new SqliteLicenseRepository(sqliteDb);
+  const printerRepo = new SqlitePrinterConfigRepository(sqliteDb);
 
   // 4. Initialize Services & Engines
   const auditService = new AuditService(auditRepo);
-  const licenseService = new LicenseService(config.isDevelopment);
-  const passwordHasher = new ScryptPasswordHasher();
   const rbacEngine = new RBACEngine();
+  const licenseService = new LicenseService(licenseRepo, auditService, rbacEngine, undefined, config.isDevelopment);
+  const defaultBackupDir = path.join(app.getPath('userData'), 'backups');
+  const backupService = new BackupService(config.databasePath, defaultBackupDir, backupRepo, auditService, rbacEngine, backupSettingsRepo);
+  const printService = new PrintService();
+  const passwordHasher = new ScryptPasswordHasher();
 
   const initService = new SystemInitializationService(
     orgRepo,
@@ -131,12 +186,136 @@ function initializeServices() {
     rbacEngine
   );
 
+  const patientService = new PatientService(
+    patientRepo,
+    auditService,
+    rbacEngine
+  );
+
+  const doctorService = new DoctorService(
+    doctorRepo,
+    auditService,
+    rbacEngine
+  );
+
+  const appointmentService = new AppointmentService(
+    appointmentRepo,
+    patientRepo,
+    doctorRepo,
+    auditService,
+    rbacEngine
+  );
+
+  const clinicalVisitService = new ClinicalVisitService(
+    visitRepo,
+    patientRepo,
+    doctorRepo,
+    auditService,
+    rbacEngine,
+    appointmentRepo,
+    correctionRepo
+  );
+
+  const prescriptionService = new PrescriptionService(
+    rxRepo,
+    patientRepo,
+    doctorRepo,
+    auditService,
+    rbacEngine,
+    allergyRepo
+  );
+
+  const medicalRecordService = new PatientMedicalRecordService(
+    vitalsRepo,
+    allergyRepo,
+    historyRepo,
+    diagnosisRepo,
+    followUpRepo,
+    patientRepo,
+    auditService,
+    rbacEngine
+  );
+
+  const medicineService = new MedicineMasterService(
+    medicineRepo,
+    productRepo,
+    auditService,
+    rbacEngine
+  );
+
+  const supplierPurchaseService = new SupplierPurchaseService(
+    supplierRepo,
+    purchaseRepo,
+    auditService,
+    rbacEngine
+  );
+
+  const inventoryService = new InventoryService(
+    batchRepo,
+    movementRepo,
+    productRepo,
+    auditService,
+    rbacEngine
+  );
+
+  const billingService = new PharmacyBillingService(
+    saleRepo,
+    saleReturnRepo,
+    batchRepo,
+    productRepo,
+    auditService,
+    rbacEngine,
+    rxRepo
+  );
+
+  const lanDeviceRepo = new SqliteLanDeviceRepository(sqliteDb);
+  const lanConfigRepo = new SqliteLanServerConfigRepository(sqliteDb);
+  const lanSecurityManager = new LanSecurityManager(lanConfigRepo, lanDeviceRepo);
+  const lanServer = new LanServer(lanConfigRepo, lanDeviceRepo, lanSecurityManager, {
+    authService,
+    patientService,
+    doctorService,
+    appointmentService,
+    clinicalVisitService,
+    prescriptionService,
+    medicalRecordService,
+    medicineService,
+    purchaseService: supplierPurchaseService,
+    inventoryService,
+    billingService,
+    auditService,
+    rbacEngine
+  });
+  const lanGateway = new LanClientGateway({
+    serverUrl: 'http://localhost:4848',
+    organizationId: 'default-org'
+  });
+
   // 5. Register IPC Handlers
   registerAllIpcHandlers({
     statusService,
     initService,
     authService,
     userService,
+    patientService,
+    doctorService,
+    appointmentService,
+    clinicalVisitService,
+    prescriptionService,
+    medicalRecordService,
+    medicineService,
+    supplierPurchaseService,
+    inventoryService,
+    billingService,
+    backupService,
+    licenseService,
+    printService,
+    printerRepo,
+    lanServer,
+    lanGateway,
+    securityManager: lanSecurityManager,
+    lanConfigRepo,
+    lanDeviceRepo,
     auditService,
     config
   });
@@ -148,81 +327,105 @@ async function createWindow(): Promise<BrowserWindow> {
   const preloadCandidateMjs = path.join(__dirname, '../preload/index.mjs');
   const preloadCandidateJs = path.join(__dirname, '../preload/index.js');
   const preloadPath = fs.existsSync(preloadCandidateMjs) ? preloadCandidateMjs : preloadCandidateJs;
-  logger.info(`Creating BrowserWindow with preload: ${preloadPath}`);
+
+  logger.info(`Creating Electron BrowserWindow with preload: ${preloadPath}`);
 
   mainWindow = new BrowserWindow({
-    title: 'MediDesk',
-    width: 1200,
+    width: 1280,
     height: 800,
-    minWidth: 900,
-    minHeight: 600,
-    show: false,
-    autoHideMenuBar: true,
+    minWidth: 1024,
+    minHeight: 680,
+    title: 'MediDesk',
     webPreferences: {
-      // STRICT ELECTRON SECURITY FLAGS
       preload: preloadPath,
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
       webSecurity: true,
       allowRunningInsecureContent: false
-    }
+    },
+    show: false,
+    autoHideMenuBar: true
   });
 
-  // Prevent navigation to untrusted external URLs
-  mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
-    const parsedUrl = new URL(navigationUrl);
-    if (parsedUrl.origin !== 'http://localhost:5173' && parsedUrl.protocol !== 'file:') {
-      logger.warn(`Blocked navigation to untrusted URL: ${navigationUrl}`);
-      event.preventDefault();
-    }
-  });
-
-  // Prevent opening new untrusted windows
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    logger.warn(`Blocked new window creation for URL: ${url}`);
+  mainWindow.webContents.setWindowOpenHandler(() => {
     return { action: 'deny' };
   });
 
-  mainWindow.on('ready-to-show', () => {
-    mainWindow?.show();
-    logger.info('MediDesk window displayed.');
+  mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
+    const isDev = config.isDevelopment;
+    const isAllowed = isDev
+      ? navigationUrl.startsWith('http://localhost:5173')
+      : navigationUrl.startsWith('file://');
+
+    if (!isAllowed) {
+      event.preventDefault();
+      logger.warn(`Blocked navigation to untrusted URL: ${navigationUrl}`);
+    }
   });
 
+  setupSecurityHeaders();
+
   if (process.env.VITE_DEV_SERVER_URL) {
-    logger.info(`Loading dev server URL: ${process.env.VITE_DEV_SERVER_URL}`);
+    logger.info(`Loading Vite dev server: ${process.env.VITE_DEV_SERVER_URL}`);
     await mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
   } else {
-    const indexHtml = path.join(__dirname, '../renderer/index.html');
-    logger.info(`Loading production HTML: ${indexHtml}`);
-    await mainWindow.loadFile(indexHtml);
+    const indexPath = path.join(__dirname, '../renderer/index.html');
+    logger.info(`Loading production file: ${indexPath}`);
+    await mainWindow.loadFile(indexPath);
   }
+
+  mainWindow.once('ready-to-show', () => {
+    mainWindow?.show();
+  });
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
 
   return mainWindow;
 }
 
-// App lifecycle
-app.whenReady().then(async () => {
-  setupSecurityHeaders();
-  initializeServices();
-  await createWindow();
+const gotTheLock = app.requestSingleInstanceLock();
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+if (!gotTheLock) {
+  logger.warn('Another instance is already running. Exiting.');
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
     }
   });
-});
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
+  app.whenReady().then(async () => {
+    try {
+      initializeServices();
+      await createWindow();
 
-app.on('before-quit', () => {
-  logger.info('MediDesk application shutting down...');
-  if (sqliteDb) {
-    sqliteDb.close();
-  }
-});
+      app.on('activate', () => {
+        if (BrowserWindow.getAllWindows().length === 0) {
+          createWindow();
+        }
+      });
+    } catch (err) {
+      logger.error('Failed to initialize MediDesk application:', err);
+      app.quit();
+    }
+  });
+
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') {
+      app.quit();
+    }
+  });
+
+  app.on('before-quit', () => {
+    if (sqliteDb) {
+      logger.info('Closing SQLite database connection before quit.');
+      sqliteDb.close();
+      sqliteDb = null;
+    }
+  });
+}

@@ -6,8 +6,28 @@ import {
   UpdateUserSchema,
   ResetPasswordSchema,
   ToggleUserStatusSchema,
-  LoginRequestSchema
+  LoginRequestSchema,
+  RecoverOwnerSchema,
+  CreateOwnerViaRecoverySchema
 } from './user.schema.js';
+import {
+  CreatePatientSchema,
+  UpdatePatientSchema,
+  SearchPatientSchema,
+  CheckDuplicatesSchema
+} from './patient.schema.js';
+import {
+  CreateDoctorSchema,
+  UpdateDoctorSchema,
+  SetDoctorSchedulesSchema
+} from './doctor.schema.js';
+import {
+  CreateAppointmentSchema,
+  UpdateAppointmentSchema,
+  ChangeAppointmentStatusSchema,
+  ListAppointmentsSchema,
+  GetWaitingQueueSchema
+} from './appointment.schema.js';
 
 export const InitializeSystemRequestSchema = z.object({
   organization: CreateOrganizationSchema,
@@ -37,6 +57,12 @@ export type ResetPasswordIPCRequestInput = z.infer<typeof ResetPasswordIPCReques
 export const ToggleUserStatusIPCRequestSchema = ToggleUserStatusSchema;
 export type ToggleUserStatusIPCRequestInput = z.infer<typeof ToggleUserStatusIPCRequestSchema>;
 
+export const RecoverOwnerIPCRequestSchema = RecoverOwnerSchema;
+export type RecoverOwnerIPCRequestInput = z.infer<typeof RecoverOwnerIPCRequestSchema>;
+
+export const CreateOwnerViaRecoveryIPCRequestSchema = CreateOwnerViaRecoverySchema;
+export type CreateOwnerViaRecoveryIPCRequestInput = z.infer<typeof CreateOwnerViaRecoveryIPCRequestSchema>;
+
 export const LogAuditEventRequestSchema = CreateAuditEventSchema;
 export type LogAuditEventRequestInput = z.infer<typeof LogAuditEventRequestSchema>;
 
@@ -44,3 +70,21 @@ export const GetAuditEventsRequestSchema = z.object({
   limit: z.number().int().min(1).max(200).default(50)
 });
 export type GetAuditEventsRequestInput = z.infer<typeof GetAuditEventsRequestSchema>;
+
+// Patient IPC Schemas
+export const CreatePatientIPCRequestSchema = CreatePatientSchema;
+export const UpdatePatientIPCRequestSchema = UpdatePatientSchema;
+export const SearchPatientIPCRequestSchema = SearchPatientSchema;
+export const CheckDuplicatesIPCRequestSchema = CheckDuplicatesSchema;
+
+// Doctor IPC Schemas
+export const CreateDoctorIPCRequestSchema = CreateDoctorSchema;
+export const UpdateDoctorIPCRequestSchema = UpdateDoctorSchema;
+export const SetDoctorSchedulesIPCRequestSchema = SetDoctorSchedulesSchema;
+
+// Appointment IPC Schemas
+export const CreateAppointmentIPCRequestSchema = CreateAppointmentSchema;
+export const UpdateAppointmentIPCRequestSchema = UpdateAppointmentSchema;
+export const ChangeAppointmentStatusIPCRequestSchema = ChangeAppointmentStatusSchema;
+export const ListAppointmentsIPCRequestSchema = ListAppointmentsSchema;
+export const GetWaitingQueueIPCRequestSchema = GetWaitingQueueSchema;

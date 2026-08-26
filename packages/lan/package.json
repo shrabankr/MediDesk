@@ -1,0 +1,22 @@
+{
+  "name": "@medidesk/lan",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@medidesk/domain": "*",
+    "@medidesk/database": "*",
+    "@medidesk/shared": "*",
+    "@medidesk/authorization": "*",
+    "@medidesk/audit": "*",
+    "@medidesk/application": "*",
+    "@medidesk/licensing": "*",
+    "@medidesk/backup": "*",
+    "@medidesk/printing": "*"
+  }
+}

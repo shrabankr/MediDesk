@@ -34,13 +34,19 @@ describe('SQLite Database & MigrationRunner Integration', () => {
     expect(journalPragma).toBe('wal');
   });
 
-  it('should run 001_initial_schema migration and seed foundational roles/permissions', () => {
+  it('should run migrations and seed foundational roles, permissions, and Phase 6/7 schema', () => {
     const applied = runner.runPendingMigrations();
-    expect(applied).toBe(1);
+    expect(applied).toBe(7);
 
     const history = runner.getAppliedMigrations();
-    expect(history.length).toBe(1);
+    expect(history.length).toBe(7);
     expect(history[0]?.version).toBe('001');
+    expect(history[1]?.version).toBe('002');
+    expect(history[2]?.version).toBe('003');
+    expect(history[3]?.version).toBe('004');
+    expect(history[4]?.version).toBe('005');
+    expect(history[5]?.version).toBe('006');
+    expect(history[6]?.version).toBe('007');
 
     // Verify tables exist
     const raw = db.getRawDb();
@@ -57,6 +63,43 @@ describe('SQLite Database & MigrationRunner Integration', () => {
     expect(tableNames).toContain('role_permissions');
     expect(tableNames).toContain('audit_events');
     expect(tableNames).toContain('application_state');
+    expect(tableNames).toContain('patients');
+    expect(tableNames).toContain('doctors');
+    expect(tableNames).toContain('doctor_schedules');
+    expect(tableNames).toContain('appointments');
+
+    // Phase 4 Tables
+    expect(tableNames).toContain('clinical_visits');
+    expect(tableNames).toContain('vitals');
+    expect(tableNames).toContain('allergies');
+    expect(tableNames).toContain('medical_history');
+    expect(tableNames).toContain('diagnoses');
+    expect(tableNames).toContain('prescriptions');
+    expect(tableNames).toContain('prescription_versions');
+    expect(tableNames).toContain('prescription_items');
+    expect(tableNames).toContain('follow_ups');
+    expect(tableNames).toContain('clinical_corrections');
+
+    // Phase 5 Tables
+    expect(tableNames).toContain('medicines');
+    expect(tableNames).toContain('manufacturers');
+    expect(tableNames).toContain('medicine_products');
+    expect(tableNames).toContain('suppliers');
+    expect(tableNames).toContain('inventory_batches');
+    expect(tableNames).toContain('stock_movements');
+    expect(tableNames).toContain('purchases');
+    expect(tableNames).toContain('purchase_items');
+    expect(tableNames).toContain('sales');
+    expect(tableNames).toContain('sale_items');
+    expect(tableNames).toContain('sale_returns');
+    expect(tableNames).toContain('sale_return_items');
+    expect(tableNames).toContain('tax_rules');
+    expect(tableNames).toContain('backup_settings');
+
+    // Phase 7 Tables
+    expect(tableNames).toContain('lan_devices');
+    expect(tableNames).toContain('lan_pairing_pins');
+    expect(tableNames).toContain('lan_server_config');
 
     // Verify seeded roles
     const roles = raw.prepare('SELECT name FROM roles ORDER BY name ASC').all() as Array<{ name: string }>;

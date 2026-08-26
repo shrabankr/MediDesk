@@ -26,7 +26,8 @@ export default defineConfig({
       '@medidesk/licensing': path.resolve(__dirname, 'packages/licensing/src'),
       '@medidesk/shared': path.resolve(__dirname, 'packages/shared/src'),
       '@medidesk/ui': path.resolve(__dirname, 'packages/ui/src'),
-      '@medidesk/application': path.resolve(__dirname, 'packages/application/src')
+      '@medidesk/application': path.resolve(__dirname, 'packages/application/src'),
+      '@medidesk/lan': path.resolve(__dirname, 'packages/lan/src')
     }
   }
 });

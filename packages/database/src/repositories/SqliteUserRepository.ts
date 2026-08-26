@@ -104,7 +104,7 @@ export class SqliteUserRepository implements IUserRepository {
         now
       );
 
-      for (const roleName of dto.roles) {
+      for (const roleName of dto.roles || []) {
         const role = raw.prepare('SELECT id FROM roles WHERE name = ?').get(roleName) as { id: string } | undefined;
         if (role) {
           raw.prepare(`

@@ -8,10 +8,10 @@ export type ValidationResult<T> =
 /**
  * Validates data against a Zod schema and returns typed result.
  */
-export function validateSchema<T>(schema: z.ZodType<T>, data: unknown): ValidationResult<T> {
+export function validateSchema<T extends z.ZodTypeAny>(schema: T, data: unknown): ValidationResult<z.output<T>> {
   const result = schema.safeParse(data);
   if (result.success) {
-    return { success: true, data: result.data };
+    return { success: true, data: result.data as z.output<T> };
   }
 
   const errors: Record<string, string[]> = {};
@@ -29,7 +29,7 @@ export function validateSchema<T>(schema: z.ZodType<T>, data: unknown): Validati
 /**
  * Validates data against a schema, throwing a Domain ValidationError on failure.
  */
-export function parseOrThrow<T>(schema: z.ZodType<T>, data: unknown, contextName = 'Input'): T {
+export function parseOrThrow<T extends z.ZodTypeAny>(schema: T, data: unknown, contextName = 'Input'): z.output<T> {
   const result = validateSchema(schema, data);
   if (!result.success) {
     throw new ValidationError(`Validation failed for ${contextName}`, result.errors);

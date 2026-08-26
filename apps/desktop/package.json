@@ -16,6 +16,7 @@
     "@medidesk/backup": "*",
     "@medidesk/database": "*",
     "@medidesk/domain": "*",
+    "@medidesk/lan": "*",
     "@medidesk/licensing": "*",
     "@medidesk/printing": "*",
     "@medidesk/shared": "*",
