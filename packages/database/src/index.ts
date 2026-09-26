@@ -37,5 +37,6 @@ export * from './repositories/SqliteSystemAlertRepository.js';
 export * from './repositories/SqliteAlertConfigRepository.js';
 export * from './repositories/SqliteDashboardPreferenceRepository.js';
 export * from './repositories/SqliteScheduledBackupConfigRepository.js';
+export * from './repositories/SqliteStockReconciliationRepository.js';
 
 

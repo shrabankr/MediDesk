@@ -15,6 +15,7 @@ import {
   Pill,
   Boxes,
   Truck,
+  UploadCloud,
   Settings
 } from 'lucide-react';
 import { Button, Badge } from '@medidesk/ui';
@@ -30,6 +31,7 @@ export type NavTab =
   | 'medicines'
   | 'inventory'
   | 'purchases'
+  | 'import'
   | 'settings'
   | 'users'
   | 'audit'
@@ -56,6 +58,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     { id: 'medicines', label: 'Medicine Master', icon: Pill },
     { id: 'inventory', label: 'Inventory & Stock', icon: Boxes },
     { id: 'purchases', label: 'Purchases & Inward', icon: Truck },
+    { id: 'import', label: 'Bulk Data Import', icon: UploadCloud },
     { id: 'appointments', label: 'Appointments & Queue', icon: Calendar },
     { id: 'patients', label: 'Patients', icon: UserCheck },
     { id: 'doctors', label: 'Doctors', icon: Stethoscope },

@@ -113,7 +113,15 @@ export const PermissionCode = {
   DASHBOARD_MANAGE: 'dashboard.manage',
   PACKAGING_MANAGE: 'packaging.manage',
   BACKUP_SCHEDULE: 'backup.schedule',
-  DOCUMENT_DISPATCH: 'document.dispatch'
+  DOCUMENT_DISPATCH: 'document.dispatch',
+
+  // Phase 9A Physical Stock Reconciliation Permissions
+  RECONCILIATION_READ: 'reconciliation.read',
+  RECONCILIATION_CREATE: 'reconciliation.create',
+  RECONCILIATION_SUBMIT: 'reconciliation.submit',
+  RECONCILIATION_APPROVE: 'reconciliation.approve',
+  RECONCILIATION_REJECT: 'reconciliation.reject',
+  RECONCILIATION_POST: 'reconciliation.post'
 } as const;
 
 export type PermissionCode = (typeof PermissionCode)[keyof typeof PermissionCode];

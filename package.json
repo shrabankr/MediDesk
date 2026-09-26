@@ -13,6 +13,7 @@
     "dev": "npm --workspace=@medidesk/desktop run dev",
     "prebuild": "electron-rebuild -f -w better-sqlite3",
     "build": "npm --workspace=@medidesk/desktop run build",
+    "prepackage:win": "electron-rebuild -v 33.2.1 -f -w better-sqlite3",
     "package:win": "npm --workspace=@medidesk/desktop run package:win",
     "pretest": "npm rebuild better-sqlite3",
     "test": "vitest run",

@@ -36,10 +36,10 @@ describe('SQLite Database & MigrationRunner Integration', () => {
 
   it('should run migrations and seed foundational roles, permissions, and Phase 6/7 schema', () => {
     const applied = runner.runPendingMigrations();
-    expect(applied).toBe(8);
+    expect(applied).toBe(9);
 
     const history = runner.getAppliedMigrations();
-    expect(history.length).toBe(8);
+    expect(history.length).toBe(9);
     expect(history[0]?.version).toBe('001');
     expect(history[1]?.version).toBe('002');
     expect(history[2]?.version).toBe('003');
@@ -48,6 +48,7 @@ describe('SQLite Database & MigrationRunner Integration', () => {
     expect(history[5]?.version).toBe('006');
     expect(history[6]?.version).toBe('007');
     expect(history[7]?.version).toBe('008');
+    expect(history[8]?.version).toBe('009');
 
     // Verify tables exist
     const raw = db.getRawDb();

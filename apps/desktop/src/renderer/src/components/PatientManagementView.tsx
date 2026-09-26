@@ -1,22 +1,50 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import {
+  User,
+  Plus,
+  Search,
+  CheckCircle,
+  AlertTriangle,
+  Download,
+  UploadCloud,
+  RefreshCw,
+  Calendar,
+  Pencil,
+  Eye,
+  X,
+  Phone,
+  MapPin,
+  Clock,
+  ShieldAlert,
+  FileText,
+  AlertCircle
+} from 'lucide-react';
+import { Button, Card, Badge } from '@medidesk/ui';
 import { Patient, DuplicatePatientMatch, SessionUser } from '@medidesk/shared';
+import { DataExportModal, ExportColumn } from './common/DataExportModal.js';
 
 interface PatientManagementViewProps {
   currentUser: SessionUser;
   onBookAppointment?: (patient: Patient) => void;
+  onNavigate?: (tab: string) => void;
 }
 
 export const PatientManagementView: React.FC<PatientManagementViewProps> = ({
   currentUser,
-  onBookAppointment
+  onBookAppointment,
+  onNavigate
 }) => {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
 
-  // Registration Modal State
+  // Modals
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
+
+  // Registration Form State
   const [registerForm, setRegisterForm] = useState({
     fullName: '',
     sex: 'MALE' as 'MALE' | 'FEMALE' | 'OTHER',
@@ -33,8 +61,7 @@ export const PatientManagementView: React.FC<PatientManagementViewProps> = ({
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Edit Modal State
-  const [isEditOpen, setIsEditOpen] = useState(false);
+  // Edit Form State
   const [editForm, setEditForm] = useState({
     fullName: '',
     sex: 'MALE' as 'MALE' | 'FEMALE' | 'OTHER',
@@ -57,7 +84,7 @@ export const PatientManagementView: React.FC<PatientManagementViewProps> = ({
         {
           organizationId: currentUser.organizationId,
           query: query.trim() || undefined,
-          limit: 50
+          limit: 100
         },
         sessionToken
       );
@@ -109,6 +136,28 @@ export const PatientManagementView: React.FC<PatientManagementViewProps> = ({
     setFormError(null);
 
     try {
+      // 1. Duplicate check unless forced
+      if (!forceCreate) {
+        const dupRes = await window.mediDeskBridge.checkDuplicates(
+          {
+            organizationId: currentUser.organizationId,
+            fullName: registerForm.fullName.trim(),
+            mobile: registerForm.mobile.trim() || undefined,
+            dateOfBirth: registerForm.dateOfBirth || undefined,
+            sex: registerForm.sex
+          },
+          sessionToken
+        );
+
+        if (dupRes.success && dupRes.data && dupRes.data.length > 0) {
+          setDuplicateMatches(dupRes.data);
+          setShowDuplicateWarning(true);
+          setFormSubmitting(false);
+          return;
+        }
+      }
+
+      // 2. Create Patient
       const res = await window.mediDeskBridge.createPatient(
         {
           organizationId: currentUser.organizationId,
@@ -120,8 +169,7 @@ export const PatientManagementView: React.FC<PatientManagementViewProps> = ({
           alternateMobile: registerForm.alternateMobile.trim() || undefined,
           address: registerForm.address.trim() || undefined,
           emergencyContactName: registerForm.emergencyContactName.trim() || undefined,
-          emergencyContactPhone: registerForm.emergencyContactPhone.trim() || undefined,
-          forceCreateOnDuplicate: forceCreate
+          emergencyContactPhone: registerForm.emergencyContactPhone.trim() || undefined
         },
         sessionToken
       );
@@ -130,14 +178,11 @@ export const PatientManagementView: React.FC<PatientManagementViewProps> = ({
         setIsRegisterOpen(false);
         setSelectedPatient(res.data);
         loadPatients(searchQuery);
-      } else if (res.error?.code === 'DuplicatePatientWarningError' && res.error.details) {
-        setDuplicateMatches(res.error.details as DuplicatePatientMatch[]);
-        setShowDuplicateWarning(true);
       } else {
-        setFormError(res.error?.message || 'Failed to register patient');
+        setFormError(res.error?.message || 'Failed to register patient.');
       }
-    } catch (err: unknown) {
-      setFormError((err as Error).message || 'An unexpected error occurred');
+    } catch (err: any) {
+      setFormError(err.message || 'An error occurred during registration.');
     } finally {
       setFormSubmitting(false);
     }
@@ -159,8 +204,13 @@ export const PatientManagementView: React.FC<PatientManagementViewProps> = ({
     setIsEditOpen(true);
   };
 
-  const handleUpdatePatient = async () => {
+  const handleSaveEdit = async () => {
     if (!selectedPatient || !window.mediDeskBridge) return;
+    if (!editForm.fullName.trim()) {
+      setFormError('Full name is required.');
+      return;
+    }
+
     setFormSubmitting(true);
     setFormError(null);
 
@@ -187,59 +237,120 @@ export const PatientManagementView: React.FC<PatientManagementViewProps> = ({
         setSelectedPatient(res.data);
         loadPatients(searchQuery);
       } else {
-        setFormError(res.error?.message || 'Failed to update patient');
+        setFormError(res.error?.message || 'Failed to update patient.');
       }
-    } catch (err: unknown) {
-      setFormError((err as Error).message || 'An error occurred during update');
+    } catch (err: any) {
+      setFormError(err.message || 'An error occurred while updating patient.');
     } finally {
       setFormSubmitting(false);
     }
   };
 
+  const patientExportColumns: ExportColumn[] = [
+    { key: 'patientNumber', header: 'Patient ID (UHID)' },
+    { key: 'fullName', header: 'Full Name' },
+    { key: 'sex', header: 'Gender' },
+    { key: 'age', header: 'Age' },
+    { key: 'dateOfBirth', header: 'Date of Birth' },
+    { key: 'mobile', header: 'Mobile Number' },
+    { key: 'alternateMobile', header: 'Alternate Mobile' },
+    { key: 'address', header: 'Address' },
+    { key: 'emergencyContactName', header: 'Emergency Contact Name' },
+    { key: 'emergencyContactPhone', header: 'Emergency Contact Phone' },
+    { key: 'status', header: 'Status' }
+  ];
+
   return (
-    <div className="space-y-6">
-      {/* Header & Global Search Bar */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+    <div className="space-y-6 pb-12">
+      {/* Header & Global Search Bar with Icon-First Actions */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <span>👤</span> Patient Directory
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Search, register, and manage patient profiles with duplicate detection.
-          </p>
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400">
+              <User className="h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                Patient Directory & Registrations
+              </h1>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Search, register, and manage patient profiles with duplicate detection
+              </p>
+            </div>
+          </div>
         </div>
 
-        <button
-          onClick={handleOpenRegister}
-          className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow transition flex items-center gap-2"
-        >
-          <span>➕</span> Register New Patient
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => loadPatients(searchQuery)}
+            className="flex items-center gap-1.5 text-xs"
+            title="Refresh patient list"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden md:inline">Refresh</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsExportOpen(true)}
+            className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-200"
+            title="Export patients to CSV or JSON"
+          >
+            <Download className="h-3.5 w-3.5" />
+            <span>Export</span>
+          </Button>
+
+          {onNavigate && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onNavigate('import')}
+              className="flex items-center gap-1.5 text-xs text-blue-600 border-blue-200 dark:border-blue-800 hover:bg-blue-50"
+              title="Bulk import patients from CSV spreadsheet"
+            >
+              <UploadCloud className="h-3.5 w-3.5" />
+              <span>Import</span>
+            </Button>
+          )}
+
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleOpenRegister}
+            className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white font-medium"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>Register New Patient</span>
+          </Button>
+        </div>
       </div>
 
       {/* Fast Search Input */}
-      <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <form onSubmit={handleSearchSubmit} className="relative">
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by Patient ID (e.g. MD-000001), Name (e.g. Rahul), or Mobile number..."
-            className="w-full pl-11 pr-24 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white text-base focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            className="w-full pl-10 pr-24 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
-          <span className="absolute left-3.5 top-3.5 text-slate-400 text-lg">🔍</span>
+          <Search className="h-4 w-4 absolute left-3.5 top-3 text-slate-400" />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-20 top-3 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 px-2 py-1"
+              className="absolute right-20 top-2 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 px-2 py-1"
             >
               Clear
             </button>
           )}
           <button
             type="submit"
-            className="absolute right-2 top-2 px-4 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded text-sm font-medium transition"
+            className="absolute right-2 top-1.5 px-3 py-1 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded text-xs font-medium transition"
           >
             Search
           </button>
@@ -249,9 +360,9 @@ export const PatientManagementView: React.FC<PatientManagementViewProps> = ({
       {/* Patient Table & Details Drawer Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Patient List (2 cols) */}
-        <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
-            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/40">
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
               Patients Found ({patients.length})
             </span>
             {loading && <span className="text-xs text-blue-500 animate-pulse">Searching...</span>}
@@ -259,57 +370,73 @@ export const PatientManagementView: React.FC<PatientManagementViewProps> = ({
 
           <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
             {patients.length === 0 && !loading ? (
-              <div className="p-12 text-center text-slate-500 dark:text-slate-400">
-                <span className="text-4xl block mb-2">📋</span>
-                <p className="font-medium">No patients found</p>
-                <p className="text-xs text-slate-400 mt-1">
+              <div className="p-12 text-center text-slate-500 space-y-2">
+                <FileText className="h-10 w-10 text-slate-300 dark:text-slate-700 mx-auto" />
+                <p className="font-medium text-xs">No patients found</p>
+                <p className="text-[11px] text-slate-400">
                   Try adjusting your search query or register a new patient.
                 </p>
               </div>
             ) : (
-              <table className="w-full text-left text-sm border-collapse">
-                <thead className="sticky top-0 bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 text-xs uppercase font-semibold border-b border-slate-200 dark:border-slate-700">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="sticky top-0 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-700">
                   <tr>
                     <th className="p-3">Patient ID</th>
                     <th className="p-3">Full Name</th>
                     <th className="p-3">Gender / Age</th>
                     <th className="p-3">Mobile</th>
-                    <th className="p-3 text-right">Action</th>
+                    <th className="p-3 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {patients.map((p) => {
                     const isSelected = selectedPatient?.id === p.id;
                     return (
                       <tr
                         key={p.id}
                         onClick={() => setSelectedPatient(p)}
-                        className={`cursor-pointer transition hover:bg-blue-50 dark:hover:bg-slate-700/50 ${
-                          isSelected ? 'bg-blue-50/80 dark:bg-slate-700/80 border-l-4 border-blue-600' : ''
+                        className={`cursor-pointer transition-colors ${
+                          isSelected
+                            ? 'bg-blue-50/80 dark:bg-blue-950/40 font-medium'
+                            : 'hover:bg-slate-50 dark:hover:bg-slate-800/30'
                         }`}
                       >
                         <td className="p-3 font-mono font-bold text-blue-600 dark:text-blue-400">
                           {p.patientNumber}
                         </td>
-                        <td className="p-3 font-medium text-slate-900 dark:text-white">
+                        <td className="p-3 font-semibold text-slate-900 dark:text-white">
                           {p.fullName}
                         </td>
-                        <td className="p-3 text-slate-600 dark:text-slate-300">
-                          {p.sex} {p.age ? `• ${p.age} yrs` : p.dateOfBirth ? `• DOB: ${p.dateOfBirth}` : ''}
+                        <td className="p-3 text-slate-600 dark:text-slate-400">
+                          {p.sex} • {p.age ? `${p.age} yrs` : p.dateOfBirth ? `${p.dateOfBirth}` : '—'}
                         </td>
-                        <td className="p-3 font-mono text-slate-600 dark:text-slate-300">
+                        <td className="p-3 font-mono text-slate-600 dark:text-slate-400">
                           {p.mobile || '—'}
                         </td>
                         <td className="p-3 text-right">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedPatient(p);
-                            }}
-                            className="text-xs px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded font-medium"
-                          >
-                            View
-                          </button>
+                          <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                            {onBookAppointment && (
+                              <button
+                                onClick={() => onBookAppointment(p)}
+                                className="px-2.5 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 rounded font-medium text-xs flex items-center gap-1 transition"
+                                title="Book appointment for patient"
+                              >
+                                <Calendar className="h-3.5 w-3.5" />
+                                <span>Book</span>
+                              </button>
+                            )}
+                            <button
+                              onClick={() => {
+                                setSelectedPatient(p);
+                                handleOpenEdit(p);
+                              }}
+                              className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 rounded transition"
+                              title="Edit patient profile"
+                              aria-label="Edit patient profile"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -320,202 +447,177 @@ export const PatientManagementView: React.FC<PatientManagementViewProps> = ({
           </div>
         </div>
 
-        {/* Selected Patient Details Drawer (1 col) */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-6 flex flex-col justify-between">
+        {/* Selected Patient Details Card (1 col) */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-5">
           {selectedPatient ? (
-            <div className="space-y-6">
-              <div className="flex justify-between items-start border-b border-slate-100 dark:border-slate-700 pb-4">
-                <div>
-                  <span className="text-xs font-mono font-bold px-2 py-0.5 bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 rounded">
-                    {selectedPatient.patientNumber}
-                  </span>
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-1">
-                    {selectedPatient.fullName}
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Status: <span className="text-emerald-600 font-semibold">{selectedPatient.status}</span>
-                  </p>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400">
+                    <User className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 dark:text-white text-sm">
+                      {selectedPatient.fullName}
+                    </h3>
+                    <span className="font-mono text-[11px] text-blue-600 dark:text-blue-400">
+                      {selectedPatient.patientNumber}
+                    </span>
+                  </div>
                 </div>
 
-                <button
+                <Badge variant={selectedPatient.status === 'ACTIVE' ? 'success' : 'secondary'} className="text-[10px]">
+                  {selectedPatient.status}
+                </Badge>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div className="flex items-start gap-2 text-slate-600 dark:text-slate-400">
+                  <Phone className="h-3.5 w-3.5 text-slate-400 mt-0.5 shrink-0" />
+                  <div>
+                    <span className="text-slate-400 block text-[10px]">Mobile</span>
+                    <span className="font-mono font-medium text-slate-800 dark:text-slate-200">
+                      {selectedPatient.mobile || 'None provided'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2 text-slate-600 dark:text-slate-400">
+                  <Clock className="h-3.5 w-3.5 text-slate-400 mt-0.5 shrink-0" />
+                  <div>
+                    <span className="text-slate-400 block text-[10px]">Demographics</span>
+                    <span className="font-medium text-slate-800 dark:text-slate-200">
+                      {selectedPatient.sex} • {selectedPatient.age ? `${selectedPatient.age} years old` : selectedPatient.dateOfBirth || 'Unknown age'}
+                    </span>
+                  </div>
+                </div>
+
+                {selectedPatient.address && (
+                  <div className="flex items-start gap-2 text-slate-600 dark:text-slate-400">
+                    <MapPin className="h-3.5 w-3.5 text-slate-400 mt-0.5 shrink-0" />
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">Address</span>
+                      <span className="font-medium text-slate-800 dark:text-slate-200">{selectedPatient.address}</span>
+                    </div>
+                  </div>
+                )}
+
+                {selectedPatient.emergencyContactName && (
+                  <div className="p-3 bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 rounded-xl space-y-1">
+                    <span className="text-[10px] font-bold text-amber-800 dark:text-amber-300 block">Emergency Contact</span>
+                    <p className="font-medium text-slate-800 dark:text-slate-200">
+                      {selectedPatient.emergencyContactName} ({selectedPatient.emergencyContactPhone || 'No phone'})
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex gap-2">
+                {onBookAppointment && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => onBookAppointment(selectedPatient)}
+                    className="flex-1 text-xs bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-1.5"
+                  >
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span>Book Visit</span>
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => handleOpenEdit(selectedPatient)}
-                  className="px-3 py-1.5 text-xs bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded font-medium transition"
+                  className="flex items-center gap-1.5 text-xs"
                 >
-                  ✏️ Edit Profile
-                </button>
+                  <Pencil className="h-3.5 w-3.5" />
+                  <span>Edit</span>
+                </Button>
               </div>
-
-              {/* Patient Demographics */}
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between py-1 border-b border-slate-50 dark:border-slate-750">
-                  <span className="text-slate-500 dark:text-slate-400">Gender:</span>
-                  <span className="font-medium text-slate-800 dark:text-slate-200">{selectedPatient.sex}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-50 dark:border-slate-750">
-                  <span className="text-slate-500 dark:text-slate-400">Age / DOB:</span>
-                  <span className="font-medium text-slate-800 dark:text-slate-200">
-                    {selectedPatient.age ? `${selectedPatient.age} years` : '—'}{' '}
-                    {selectedPatient.dateOfBirth ? `(${selectedPatient.dateOfBirth})` : ''}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-50 dark:border-slate-750">
-                  <span className="text-slate-500 dark:text-slate-400">Primary Mobile:</span>
-                  <span className="font-mono font-medium text-slate-800 dark:text-slate-200">
-                    {selectedPatient.mobile || '—'}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-50 dark:border-slate-750">
-                  <span className="text-slate-500 dark:text-slate-400">Alternate Contact:</span>
-                  <span className="font-mono text-slate-800 dark:text-slate-200">
-                    {selectedPatient.alternateMobile || '—'}
-                  </span>
-                </div>
-                <div className="py-1 border-b border-slate-50 dark:border-slate-750">
-                  <span className="text-slate-500 dark:text-slate-400 block text-xs mb-0.5">Address:</span>
-                  <span className="text-slate-800 dark:text-slate-200">{selectedPatient.address || '—'}</span>
-                </div>
-                <div className="py-1">
-                  <span className="text-slate-500 dark:text-slate-400 block text-xs mb-0.5">Emergency Contact:</span>
-                  <span className="text-slate-800 dark:text-slate-200">
-                    {selectedPatient.emergencyContactName ? (
-                      <>
-                        {selectedPatient.emergencyContactName}{' '}
-                        {selectedPatient.emergencyContactPhone && (
-                          <span className="font-mono text-xs text-slate-500">
-                            ({selectedPatient.emergencyContactPhone})
-                          </span>
-                        )}
-                      </>
-                    ) : (
-                      '—'
-                    )}
-                  </span>
-                </div>
-              </div>
-
-              {/* Action: Book Appointment */}
-              {onBookAppointment && (
-                <button
-                  onClick={() => onBookAppointment(selectedPatient)}
-                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg shadow transition flex items-center justify-center gap-2 text-sm mt-4"
-                >
-                  <span>📅</span> Book Appointment for Patient
-                </button>
-              )}
             </div>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center text-center p-8 text-slate-400">
-              <span className="text-4xl block mb-2">👈</span>
-              <p className="font-medium text-slate-600 dark:text-slate-300">Select a Patient</p>
-              <p className="text-xs mt-1">Click any patient row in the table to view their complete profile.</p>
+            <div className="py-16 text-center text-slate-400 space-y-2">
+              <Eye className="h-8 w-8 mx-auto text-slate-300 dark:text-slate-700" />
+              <p className="text-xs font-medium">Select a patient from the list to view profile details</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Registration Modal with Duplicate Warning Dialog */}
+      {/* Modal: Register Patient */}
       {isRegisterOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 w-full max-w-xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="p-5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <span>➕</span> New Patient Registration
-              </h3>
-              <button
-                onClick={() => setIsRegisterOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg"
-              >
-                ✕
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <Card className="w-full max-w-lg p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Plus className="h-5 w-5 text-blue-600" />
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Register New Patient</h3>
+              </div>
+              <button onClick={() => setIsRegisterOpen(false)} className="text-slate-400 hover:text-slate-600 font-bold p-1">
+                <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4 overflow-y-auto flex-1">
-              {formError && (
-                <div className="p-3 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 rounded-lg text-sm text-rose-700 dark:text-rose-300">
-                  {formError}
+            {formError && (
+              <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-xl text-xs text-rose-700 dark:text-rose-300 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+                <span>{formError}</span>
+              </div>
+            )}
+
+            {showDuplicateWarning && duplicateMatches.length > 0 && (
+              <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl space-y-2 text-xs">
+                <div className="flex items-center gap-2 font-bold text-amber-800 dark:text-amber-300">
+                  <ShieldAlert className="h-4 w-4" />
+                  <span>Potential Duplicate Patients Detected</span>
                 </div>
-              )}
-
-              {/* Duplicate Detection Alert & Decision Flow */}
-              {showDuplicateWarning && duplicateMatches.length > 0 && (
-                <div className="p-4 bg-amber-50 dark:bg-amber-900/40 border-2 border-amber-400 rounded-xl space-y-3">
-                  <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200 font-bold text-sm">
-                    <span className="text-lg">⚠️</span> Possible Existing Patient Found!
-                  </div>
-                  <p className="text-xs text-amber-700 dark:text-amber-300">
-                    We detected matching patient records in the clinic directory. Please verify to avoid creating duplicate records:
-                  </p>
-
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {duplicateMatches.map((m) => (
-                      <div
-                        key={m.patient.id}
-                        className="p-3 bg-white dark:bg-slate-800 rounded-lg border border-amber-200 dark:border-amber-700 flex justify-between items-center"
-                      >
-                        <div>
-                          <div className="font-bold text-sm text-slate-900 dark:text-white">
-                            {m.patient.fullName}{' '}
-                            <span className="font-mono text-xs text-blue-600 dark:text-blue-400">
-                              ({m.patient.patientNumber})
-                            </span>
-                          </div>
-                          <div className="text-xs text-slate-500">
-                            Mobile: <span className="font-mono">{m.patient.mobile || 'None'}</span> • {m.patient.sex} •{' '}
-                            {m.matchReason}
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedPatient(m.patient);
-                            setIsRegisterOpen(false);
-                          }}
-                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded shadow transition"
-                        >
-                          Use Existing
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="pt-2 flex justify-end gap-2 border-t border-amber-200 dark:border-amber-700/60">
-                    <button
-                      type="button"
-                      onClick={() => handleSavePatient(true)}
-                      disabled={formSubmitting}
-                      className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded transition"
-                    >
-                      {formSubmitting ? 'Creating...' : 'Ignore & Create New Patient'}
-                    </button>
-                  </div>
+                <p className="text-slate-600 dark:text-slate-400 text-[11px]">
+                  Existing patient records match the name or mobile number:
+                </p>
+                <div className="space-y-1 max-h-24 overflow-y-auto font-mono text-[11px]">
+                  {duplicateMatches.map((m, idx) => (
+                    <div key={idx} className="p-1.5 bg-white dark:bg-slate-800 rounded border border-amber-200 dark:border-amber-900">
+                      {m.patient.fullName} ({m.patient.patientNumber}) • Match Reason: {m.matchReason}
+                    </div>
+                  ))}
                 </div>
-              )}
-
-              {/* Registration Form Fields */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Full Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={registerForm.fullName}
-                    onChange={(e) => setRegisterForm({ ...registerForm, fullName: e.target.value })}
-                    placeholder="e.g. Rahul Sharma"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  />
+                <div className="pt-2 flex justify-end gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setShowDuplicateWarning(false)}>
+                    Review Info
+                  </Button>
+                  <Button variant="primary" size="sm" onClick={() => handleSavePatient(true)} className="bg-amber-600 hover:bg-amber-700 text-white">
+                    Create Anyway (Confirm New Patient)
+                  </Button>
                 </div>
+              </div>
+            )}
 
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSavePatient(false);
+              }}
+              className="space-y-3.5 text-xs"
+            >
+              <div>
+                <label className="font-semibold block mb-1">Full Name *</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Rahul Sharma"
+                  value={registerForm.fullName}
+                  onChange={(e) => setRegisterForm({ ...registerForm, fullName: e.target.value })}
+                  className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Gender *
-                  </label>
+                  <label className="font-semibold block mb-1">Gender *</label>
                   <select
                     value={registerForm.sex}
-                    onChange={(e) => setRegisterForm({ ...registerForm, sex: e.target.value as 'MALE' | 'FEMALE' | 'OTHER' })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    onChange={(e) => setRegisterForm({ ...registerForm, sex: e.target.value as any })}
+                    className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                   >
                     <option value="MALE">Male</option>
                     <option value="FEMALE">Female</option>
@@ -524,123 +626,109 @@ export const PatientManagementView: React.FC<PatientManagementViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Age (Years)
-                  </label>
+                  <label className="font-semibold block mb-1">Mobile Number</label>
                   <input
-                    type="number"
-                    min="0"
-                    max="130"
-                    value={registerForm.age}
-                    onChange={(e) => setRegisterForm({ ...registerForm, age: e.target.value })}
-                    placeholder="e.g. 32"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Mobile Number
-                  </label>
-                  <input
-                    type="tel"
+                    type="text"
+                    placeholder="10-digit mobile"
                     value={registerForm.mobile}
                     onChange={(e) => setRegisterForm({ ...registerForm, mobile: e.target.value })}
-                    placeholder="10-digit mobile number"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-mono text-slate-900 dark:text-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Date of Birth
-                  </label>
+                  <label className="font-semibold block mb-1">Date of Birth</label>
                   <input
                     type="date"
                     value={registerForm.dateOfBirth}
                     onChange={(e) => setRegisterForm({ ...registerForm, dateOfBirth: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                   />
                 </div>
 
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Address / Area
-                  </label>
+                <div>
+                  <label className="font-semibold block mb-1">Age (if DOB unknown)</label>
                   <input
-                    type="text"
-                    value={registerForm.address}
-                    onChange={(e) => setRegisterForm({ ...registerForm, address: e.target.value })}
-                    placeholder="e.g. 14 MG Road, Ward 5"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    type="number"
+                    min="0"
+                    max="130"
+                    placeholder="e.g. 34"
+                    value={registerForm.age}
+                    onChange={(e) => setRegisterForm({ ...registerForm, age: e.target.value })}
+                    className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                   />
                 </div>
               </div>
-            </div>
 
-            <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setIsRegisterOpen(false)}
-                className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSavePatient(false)}
-                disabled={formSubmitting}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow transition disabled:opacity-50"
-              >
-                {formSubmitting ? 'Verifying & Saving...' : 'Save Patient'}
-              </button>
-            </div>
-          </div>
+              <div>
+                <label className="font-semibold block mb-1">Address</label>
+                <input
+                  type="text"
+                  placeholder="Street address, city, pin"
+                  value={registerForm.address}
+                  onChange={(e) => setRegisterForm({ ...registerForm, address: e.target.value })}
+                  className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="flex gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <Button variant="outline" type="button" onClick={() => setIsRegisterOpen(false)} className="flex-1 text-xs">
+                  <X className="h-4 w-4 mr-1" /> Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  type="submit"
+                  disabled={formSubmitting}
+                  className="flex-1 text-xs bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-1.5"
+                >
+                  <CheckCircle className="h-4 w-4" />
+                  <span>{formSubmitting ? 'Registering...' : 'Save Patient Profile'}</span>
+                </Button>
+              </div>
+            </form>
+          </Card>
         </div>
       )}
 
-      {/* Edit Patient Modal */}
-      {isEditOpen && selectedPatient && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-            <div className="p-5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <span>✏️</span> Edit Profile ({selectedPatient.patientNumber})
-              </h3>
-              <button
-                onClick={() => setIsEditOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-              >
-                ✕
+      {/* Modal: Edit Patient */}
+      {isEditOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <Card className="w-full max-w-lg p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Pencil className="h-5 w-5 text-blue-600" />
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Edit Patient Profile</h3>
+              </div>
+              <button onClick={() => setIsEditOpen(false)} className="text-slate-400 hover:text-slate-600 font-bold p-1">
+                <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
-              {formError && (
-                <div className="p-3 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 rounded-lg text-sm text-rose-700 dark:text-rose-300">
-                  {formError}
-                </div>
-              )}
-
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSaveEdit();
+              }}
+              className="space-y-3.5 text-xs"
+            >
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Full Name *
-                </label>
+                <label className="font-semibold block mb-1">Full Name *</label>
                 <input
                   type="text"
                   value={editForm.fullName}
                   onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-sm"
+                  className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                  required
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Gender</label>
+                  <label className="font-semibold block mb-1">Gender *</label>
                   <select
                     value={editForm.sex}
-                    onChange={(e) => setEditForm({ ...editForm, sex: e.target.value as 'MALE' | 'FEMALE' | 'OTHER' })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-sm"
+                    onChange={(e) => setEditForm({ ...editForm, sex: e.target.value as any })}
+                    className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                   >
                     <option value="MALE">Male</option>
                     <option value="FEMALE">Female</option>
@@ -649,57 +737,56 @@ export const PatientManagementView: React.FC<PatientManagementViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Age</label>
+                  <label className="font-semibold block mb-1">Mobile Number</label>
                   <input
-                    type="number"
-                    value={editForm.age}
-                    onChange={(e) => setEditForm({ ...editForm, age: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-sm"
+                    type="text"
+                    value={editForm.mobile}
+                    onChange={(e) => setEditForm({ ...editForm, mobile: e.target.value })}
+                    className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-mono text-slate-900 dark:text-white"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Mobile</label>
-                <input
-                  type="tel"
-                  value={editForm.mobile}
-                  onChange={(e) => setEditForm({ ...editForm, mobile: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Address</label>
+                <label className="font-semibold block mb-1">Address</label>
                 <input
                   type="text"
                   value={editForm.address}
                   onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-sm"
+                  className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                 />
               </div>
-            </div>
 
-            <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setIsEditOpen(false)}
-                className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 rounded-lg"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleUpdatePatient}
-                disabled={formSubmitting}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow disabled:opacity-50"
-              >
-                {formSubmitting ? 'Updating...' : 'Save Changes'}
-              </button>
-            </div>
-          </div>
+              <div className="flex gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <Button variant="outline" type="button" onClick={() => setIsEditOpen(false)} className="flex-1 text-xs">
+                  <X className="h-4 w-4 mr-1" /> Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  type="submit"
+                  disabled={formSubmitting}
+                  className="flex-1 text-xs bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-1.5"
+                >
+                  <CheckCircle className="h-4 w-4" />
+                  <span>{formSubmitting ? 'Saving...' : 'Save Changes'}</span>
+                </Button>
+              </div>
+            </form>
+          </Card>
         </div>
       )}
+
+      {/* Export Modal */}
+      <DataExportModal
+        isOpen={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
+        title="Export Patient Directory"
+        entityName="Patients"
+        data={patients}
+        columns={patientExportColumns}
+        currentUser={currentUser}
+        defaultFilename={`patients_directory_${new Date().toISOString().split('T')[0]}`}
+      />
     </div>
   );
 };

@@ -42,7 +42,8 @@ import {
   SqliteSystemAlertRepository,
   SqliteAlertConfigRepository,
   SqliteDashboardPreferenceRepository,
-  SqliteScheduledBackupConfigRepository
+  SqliteScheduledBackupConfigRepository,
+  SqliteStockReconciliationRepository
 } from '@medidesk/database';
 import { AuditService } from '@medidesk/audit';
 import { LicenseService } from '@medidesk/licensing';
@@ -70,6 +71,8 @@ import {
   DashboardService,
   DocumentDeliveryService,
   ScheduledBackupService,
+  StockReconciliationService,
+  BulkDataImportService,
   ScryptPasswordHasher
 } from '@medidesk/application';
 import { registerAllIpcHandlers } from './ipc/index.js';
@@ -314,6 +317,35 @@ function initializeServices() {
   const documentDeliveryService = new DocumentDeliveryService(printService, auditService);
   const scheduledBackupService = new ScheduledBackupService(scheduledBackupRepo, backupService, auditService);
 
+  // Phase 9A: Physical Inventory Reconciliation & Stock Audit
+  const reconciliationRepo = new SqliteStockReconciliationRepository(sqliteDb);
+  const reconciliationService = new StockReconciliationService(
+    reconciliationRepo,
+    batchRepo,
+    movementRepo,
+    productRepo,
+    packagingService,
+    auditService,
+    rbacEngine
+  );
+
+  // Bulk Data Import Service
+  const importService = new BulkDataImportService(
+    sqliteDb,
+    patientRepo,
+    doctorRepo,
+    userRepo,
+    medicineRepo,
+    productRepo,
+    packagingRepo,
+    supplierRepo,
+    batchRepo,
+    movementRepo,
+    passwordHasher,
+    auditService,
+    rbacEngine
+  );
+
   // 5. Register IPC Handlers
   registerAllIpcHandlers({
     statusService,
@@ -344,6 +376,8 @@ function initializeServices() {
     dashboardService,
     documentDeliveryService,
     scheduledBackupService,
+    reconciliationService,
+    importService,
     auditService,
     config
   });
@@ -352,9 +386,14 @@ function initializeServices() {
 }
 
 async function createWindow(): Promise<BrowserWindow> {
-  const preloadCandidateMjs = path.join(__dirname, '../preload/index.mjs');
+  const preloadCandidateCjs = path.join(__dirname, '../preload/index.cjs');
   const preloadCandidateJs = path.join(__dirname, '../preload/index.js');
-  const preloadPath = fs.existsSync(preloadCandidateMjs) ? preloadCandidateMjs : preloadCandidateJs;
+  const preloadCandidateMjs = path.join(__dirname, '../preload/index.mjs');
+  const preloadPath = fs.existsSync(preloadCandidateCjs)
+    ? preloadCandidateCjs
+    : fs.existsSync(preloadCandidateJs)
+      ? preloadCandidateJs
+      : preloadCandidateMjs;
 
   logger.info(`Creating Electron BrowserWindow with preload: ${preloadPath}`);
 

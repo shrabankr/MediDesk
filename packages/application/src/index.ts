@@ -19,5 +19,8 @@ export * from './services/DashboardService.js';
 export * from './services/DocumentDeliveryService.js';
 export * from './services/ScheduledBackupService.js';
 export * from './services/ErrorSanitizerService.js';
+export * from './services/StockReconciliationService.js';
+export * from './services/BulkDataImportService.js';
+export * from './utils/CsvParser.js';
 
 

@@ -27,7 +27,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
     try {
       if (!window.mediDeskBridge) {
-        throw new Error('Desktop Bridge is not available');
+        throw new Error('Desktop Bridge Error: Unable to establish IPC connection with MediDesk desktop process.');
       }
 
       const response = await window.mediDeskBridge.login({

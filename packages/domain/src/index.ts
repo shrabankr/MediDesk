@@ -78,6 +78,13 @@ export * from './repositories/IAlertConfigRepository.js';
 export * from './repositories/IDashboardPreferenceRepository.js';
 export * from './repositories/IScheduledBackupConfigRepository.js';
 
+// Phase 9A Entities & Repositories
+export * from './entities/StockReconciliation.js';
+export * from './repositories/IStockReconciliationRepository.js';
+
+// Bulk Data Import Entities & Types
+export * from './entities/BulkImport.js';
+
 // Services
 export * from './services/IPasswordHasher.js';
 

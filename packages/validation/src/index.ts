@@ -24,6 +24,8 @@ export * from './schemas/alert.schema.js';
 export * from './schemas/dashboard_preference.schema.js';
 export * from './schemas/backup_schedule.schema.js';
 export * from './schemas/document_dispatch.schema.js';
+export * from './schemas/reconciliation.schema.js';
+export * from './schemas/bulkImport.schema.js';
 export * from './helpers.js';
 
 

@@ -305,7 +305,23 @@ export const IPC_CHANNELS = {
   DASHBOARD_SAVE_LAYOUT: 'dashboard:save-layout',
   DOCUMENT_DISPATCH: 'document:dispatch',
   BACKUP_GET_SCHEDULE: 'system:backup-get-schedule',
-  BACKUP_UPDATE_SCHEDULE: 'system:backup-update-schedule'
+  BACKUP_UPDATE_SCHEDULE: 'system:backup-update-schedule',
+
+  // Phase 9A: Physical Inventory Reconciliation & Stock Audit
+  RECONCILIATION_CREATE_SESSION: 'reconciliation:create-session',
+  RECONCILIATION_GET_SESSION: 'reconciliation:get-session',
+  RECONCILIATION_LIST_SESSIONS: 'reconciliation:list-sessions',
+  RECONCILIATION_ADD_ITEM: 'reconciliation:add-item',
+  RECONCILIATION_UPDATE_ITEM: 'reconciliation:update-item',
+  RECONCILIATION_DELETE_ITEM: 'reconciliation:delete-item',
+  RECONCILIATION_SUBMIT: 'reconciliation:submit',
+  RECONCILIATION_REVIEW: 'reconciliation:review',
+
+  // Bulk Data Import
+  DATA_IMPORT_GET_TEMPLATES: 'import:get-templates',
+  DATA_IMPORT_DOWNLOAD_TEMPLATE: 'import:download-template',
+  DATA_IMPORT_VALIDATE_FILE: 'import:validate-file',
+  DATA_IMPORT_EXECUTE: 'import:execute'
 } as const;
 
 export interface SystemStatusData {
@@ -725,4 +741,24 @@ export interface ScheduleFollowUpRequest {
 export interface UpdateFollowUpStatusRequest {
   followUpId: string;
   status: FollowUpStatus;
+}
+
+// Bulk Data Import Contracts
+export interface DownloadImportTemplateRequest {
+  importType: string;
+}
+
+export interface ValidateImportFileRequest {
+  importType: string;
+  fileName: string;
+  fileContent: string;
+  organizationId: string;
+}
+
+export interface ExecuteImportRequest {
+  importType: string;
+  fileName: string;
+  policy: string;
+  validRows: Array<Record<string, unknown>>;
+  organizationId: string;
 }

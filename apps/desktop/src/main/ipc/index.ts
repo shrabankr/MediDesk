@@ -33,12 +33,16 @@ import { LicenseService } from '@medidesk/licensing';
 import { PrintService } from '@medidesk/printing';
 import { SqlitePrinterConfigRepository } from '@medidesk/database';
 import { registerPhase8IpcHandlers } from './phase8.ipc.js';
+import { registerReconciliationIpcHandlers } from './reconciliation.ipc.js';
+import { registerImportIpcHandlers } from './import.ipc.js';
 import {
   PackagingUnitService,
   SmartAlertService,
   DashboardService,
   DocumentDeliveryService,
-  ScheduledBackupService
+  ScheduledBackupService,
+  StockReconciliationService,
+  BulkDataImportService
 } from '@medidesk/application';
 import { IAuditService } from '@medidesk/audit';
 import { AppConfig } from '@medidesk/shared';
@@ -72,6 +76,8 @@ export interface RegisterIpcOptions {
   dashboardService?: DashboardService;
   documentDeliveryService?: DocumentDeliveryService;
   scheduledBackupService?: ScheduledBackupService;
+  reconciliationService?: StockReconciliationService;
+  importService?: BulkDataImportService;
   auditService: IAuditService;
   config: AppConfig;
 }
@@ -126,6 +132,12 @@ export function registerAllIpcHandlers(options: RegisterIpcOptions): void {
       options.scheduledBackupService,
       options.authService
     );
+  }
+  if (options.reconciliationService) {
+    registerReconciliationIpcHandlers(options.reconciliationService, options.authService);
+  }
+  if (options.importService) {
+    registerImportIpcHandlers(options.importService, options.authService);
   }
   registerAuditIpc(options.auditService);
   registerConfigIpc(options.config);

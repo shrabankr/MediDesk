@@ -1,0 +1,3 @@
+first_name,middle_name,last_name,gender,date_of_birth,age,phone,email,address,city,state,pincode,blood_group,allergies
+Rahul,Kumar,Sharma,MALE,1990-05-15,34,9876543210,rahul.sharma@example.com,123 MG Road,Bengaluru,Karnataka,560001,O+,Penicillin
+Pooja,,Patel,FEMALE,1995-08-20,29,9876543211,pooja.patel@example.com,456 Ring Road,Ahmedabad,Gujarat,380015,B+,None

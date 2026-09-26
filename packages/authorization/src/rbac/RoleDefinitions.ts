@@ -86,7 +86,13 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, PermissionCode[]> = {
     PermissionCode.DASHBOARD_MANAGE,
     PermissionCode.PACKAGING_MANAGE,
     PermissionCode.BACKUP_SCHEDULE,
-    PermissionCode.DOCUMENT_DISPATCH
+    PermissionCode.DOCUMENT_DISPATCH,
+    PermissionCode.RECONCILIATION_READ,
+    PermissionCode.RECONCILIATION_CREATE,
+    PermissionCode.RECONCILIATION_SUBMIT,
+    PermissionCode.RECONCILIATION_APPROVE,
+    PermissionCode.RECONCILIATION_REJECT,
+    PermissionCode.RECONCILIATION_POST
   ],
   [RoleName.DOCTOR]: [
     PermissionCode.USER_READ,
@@ -132,7 +138,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, PermissionCode[]> = {
     PermissionCode.ALERT_READ,
     PermissionCode.ALERT_ACKNOWLEDGE,
     PermissionCode.DASHBOARD_MANAGE,
-    PermissionCode.DOCUMENT_DISPATCH
+    PermissionCode.DOCUMENT_DISPATCH,
+    PermissionCode.RECONCILIATION_READ
   ],
   [RoleName.STAFF]: [
     PermissionCode.USER_READ,
@@ -170,7 +177,10 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, PermissionCode[]> = {
     PermissionCode.ALERT_ACKNOWLEDGE,
     PermissionCode.DASHBOARD_MANAGE,
     PermissionCode.PACKAGING_MANAGE,
-    PermissionCode.DOCUMENT_DISPATCH
+    PermissionCode.DOCUMENT_DISPATCH,
+    PermissionCode.RECONCILIATION_READ,
+    PermissionCode.RECONCILIATION_CREATE,
+    PermissionCode.RECONCILIATION_SUBMIT
   ],
   [RoleName.DEVELOPER]: [
     // Developer has technical authority ONLY.
@@ -255,5 +265,11 @@ export const RESTRICTED_DEVELOPER_PERMISSIONS: PermissionCode[] = [
   PermissionCode.SYSTEM_LICENSE_ACTIVATE,
   PermissionCode.PACKAGING_MANAGE,
   PermissionCode.BACKUP_SCHEDULE,
-  PermissionCode.DOCUMENT_DISPATCH
+  PermissionCode.DOCUMENT_DISPATCH,
+  PermissionCode.RECONCILIATION_READ,
+  PermissionCode.RECONCILIATION_CREATE,
+  PermissionCode.RECONCILIATION_SUBMIT,
+  PermissionCode.RECONCILIATION_APPROVE,
+  PermissionCode.RECONCILIATION_REJECT,
+  PermissionCode.RECONCILIATION_POST
 ];

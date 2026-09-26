@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import {
-  IPC_CHANNELS,
+import { IPC_CHANNELS } from '@medidesk/shared/ipc/contracts.js';
+import type {
   SystemStatusData,
   InitializationStateData,
   InitializeSystemRequest,
@@ -667,6 +667,56 @@ export const mediDeskBridge = {
 
   updateBackupSchedule: async (dto: any): Promise<IPCResponse<any>> => {
     return ipcRenderer.invoke(IPC_CHANNELS.BACKUP_UPDATE_SCHEDULE, dto);
+  },
+
+  // Phase 9A: Physical Inventory Reconciliation & Stock Audit
+  createReconciliationSession: async (dto: any, sessionToken?: string): Promise<IPCResponse<any>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.RECONCILIATION_CREATE_SESSION, { dto, sessionToken });
+  },
+
+  getReconciliationSession: async (sessionId: string, sessionToken?: string): Promise<IPCResponse<any>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.RECONCILIATION_GET_SESSION, { sessionId, sessionToken });
+  },
+
+  listReconciliationSessions: async (sessionToken?: string, limit?: number): Promise<IPCResponse<any>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.RECONCILIATION_LIST_SESSIONS, { sessionToken, limit });
+  },
+
+  addReconciliationItem: async (dto: any, sessionToken?: string): Promise<IPCResponse<any>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.RECONCILIATION_ADD_ITEM, { dto, sessionToken });
+  },
+
+  updateReconciliationItem: async (sessionId: string, dto: any, sessionToken?: string): Promise<IPCResponse<any>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.RECONCILIATION_UPDATE_ITEM, { sessionId, dto, sessionToken });
+  },
+
+  deleteReconciliationItem: async (itemId: string, sessionId: string, sessionToken?: string): Promise<IPCResponse<any>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.RECONCILIATION_DELETE_ITEM, { itemId, sessionId, sessionToken });
+  },
+
+  submitReconciliationSession: async (dto: any, sessionToken?: string): Promise<IPCResponse<any>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.RECONCILIATION_SUBMIT, { dto, sessionToken });
+  },
+
+  reviewReconciliationSession: async (dto: any, sessionToken?: string): Promise<IPCResponse<any>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.RECONCILIATION_REVIEW, { dto, sessionToken });
+  },
+
+  // Bulk Data Import
+  getImportTemplates: async (sessionToken?: string): Promise<IPCResponse<any>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.DATA_IMPORT_GET_TEMPLATES, { sessionToken });
+  },
+
+  downloadImportTemplate: async (importType: string, sessionToken?: string): Promise<IPCResponse<any>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.DATA_IMPORT_DOWNLOAD_TEMPLATE, { importType, sessionToken });
+  },
+
+  validateImportFile: async (req: any, sessionToken?: string): Promise<IPCResponse<any>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.DATA_IMPORT_VALIDATE_FILE, { ...req, sessionToken });
+  },
+
+  executeImport: async (req: any, sessionToken?: string): Promise<IPCResponse<any>> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.DATA_IMPORT_EXECUTE, { ...req, sessionToken });
   }
 };
 
